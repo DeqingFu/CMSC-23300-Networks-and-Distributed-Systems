@@ -13,4 +13,4 @@ int is_numeric(char* input);
 
 int read_port(int argc, char* argv[], int* port);
 
-void error(char* msg);
+void printInternalError();

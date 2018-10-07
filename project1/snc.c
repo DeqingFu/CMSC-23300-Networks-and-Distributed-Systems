@@ -7,13 +7,33 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include "utils.h"
+int dostuff (int sock)
+{
+  int n;
+  char buffer[256];
+      
+  bzero(buffer,256);
+  n = read(sock, buffer, 255);
+
+  if (strlen(buffer) == 0) {
+    return 1;
+  }          
+  if (n < 0) {
+    printf("here\n");
+    printInternalError();
+    return 1;
+  }
+  fprintf(stdout, "%s", buffer);
+  return 0;
+}
+
 int main(int argc, char* argv[]) {
   int opt;
   int option = 0; // Options to deal with -l -n options
   /* option = 0     -> None
    * option = 1     ->  -l
-   * option = 2     ->  -l - n
-   * option = 3     ->  -n
+   * option = 2     ->  -l - u
+   * option = 3     ->  -u
    * option = 4     -> invalid options
    */
   char hostname[256];
@@ -24,13 +44,13 @@ int main(int argc, char* argv[]) {
   opterr = 0; 
 
   /* Parsing options */
-  while ((opt = getopt(argc, argv, "ln")) != -1) {
+  while ((opt = getopt(argc, argv, "lu")) != -1) {
     switch(opt) 
     {
       case 'l':
-        option = 1;
+        option = (option == 3) ? 2 : 1;
         break;
-      case 'n':
+      case 'u':
         option = (option == 1) ? 2 : 3;
         break;
       case '?':
@@ -40,72 +60,68 @@ int main(int argc, char* argv[]) {
         break;
     }
   }
-
-
-  
-
-
+  //fprintf(stderr, "%d\n", option);
   /* Dealing with different cases */
   switch(option) 
   {
     case 4:
-      //invalid_format();
+      invalid_format();
       break;
     
     case 0:
       if (argc < 3) {
-        //invalid_format();
+        invalid_format();
       } else {
         if (!(read_port(argc, argv, &port))) {
           // Do something
-          fprintf(stderr, "Port: %d\n", port);
+          //fprintf(stderr, "Port: %d\n", port);
           strcpy(hostname, argv[1]);
-          int sockfd, portno, n;
-           struct sockaddr_in serv_addr;
-           struct hostent *server;
-           
-           char buffer[256];
-           
-           /* Create a socket point */
-           sockfd = socket(AF_INET, SOCK_STREAM, 0);
-           
-           if (sockfd < 0) {
-              error("internal error\n");
-           }
-          
-           server = gethostbyname(hostname);
-           
-           if (server == NULL) {
-              error("internal error\n");
-           }
-           
-           bzero((char *) &serv_addr, sizeof(serv_addr));
-           serv_addr.sin_family = AF_INET;
-           bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
-           serv_addr.sin_port = htons(port);
-           
-           /* Now connect to the server */
-           if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-              error("internal error\n");
-           }
-           
-           /* Now ask for a message from the user, this message
-              * will be read by server
-           */
-          
-           printf("Please enter the message: ");
-           bzero(buffer,256);
-           fgets(buffer,255,stdin);
-           
-           /* Send message to the server */
-           n = write(sockfd, buffer, strlen(buffer));
-           if (n < 0) {
-              error("internal error\n");
-           }
-  
-          /*
-          
-          */
+          int sockfd, n;
+          struct sockaddr_in serv_addr;
+          struct hostent *server;
+          char buffer[256];
+
+          while (1) {
+            /* Create a socket point */
+            sockfd = socket(AF_INET, SOCK_STREAM, 0);
+            int option = 1;
+            setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+            if (sockfd < 0) {
+              printInternalError();
+            }
+            server = gethostbyname(hostname);
+             
+            if (server == NULL) {
+              printf("here\n");
+              printInternalError();
+            }
+             
+            bzero((char *) &serv_addr, sizeof(serv_addr));
+            serv_addr.sin_family = AF_INET;
+            bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+            serv_addr.sin_port = htons(port);
+             
+            /* Now connect to the server */
+            if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+              printInternalError();
+            }
+            bzero(buffer,256);
+            char* ret = fgets(buffer,255,stdin);
+            if (ret == NULL) {
+              shutdown(sockfd,2);
+              close(sockfd); 
+              exit(0);
+            }
+
+            n = write(sockfd, buffer, strlen(buffer));
+            if (n < 0) {
+              printInternalError();
+            }
+
+            /* shutdown connection */
+            shutdown(sockfd,2);
+            close(sockfd); 
+          }
         } else {
           break;
         }
@@ -114,100 +130,108 @@ int main(int argc, char* argv[]) {
 
     case 1:
       if (argc < 3) {
-        //invalid_format();
+        invalid_format();
       } else if (argc == 3) {
-        if(!read_port(argc, argv, &port)) {
-          // Do something
-          //fprintf(stderr, "Port: %d\n", port);
-          gethostname(hostname, 255);
-          fprintf(stderr, "Hostname: %s\n", hostname);
-          int sockfd, newsockfd;
-          unsigned int clilen;
-          char buffer[256];
-          struct sockaddr_in serv_addr, cli_addr;
-          int n;
-
-          sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
-          if (sockfd < 0) {
-            fprintf(stderr, "internal error\n");
-            exit(1);
-          } 
-
-          bzero((char*) &serv_addr, sizeof(serv_addr));
-
-          serv_addr.sin_family = AF_INET;
-          serv_addr.sin_addr.s_addr = INADDR_ANY;
-          serv_addr.sin_port = htons(port);
-          if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-            error("internal error");
-          }
-          listen(sockfd, 5);
-          clilen = sizeof(cli_addr);
-          newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-          if (newsockfd < 0) {
-            error("internal error");
-          }
-          bzero(buffer, 256);
-          n = read(newsockfd, buffer, 255);
-          if (n < 0) {
-            error("internal error");
-          }
-          fprintf(stdout, "%s", buffer);
-        }
+        ;
       } else if (argc == 4) {
         if(!read_port(argc, argv, &port)) {
           // Do something
-          //fprintf(stderr, "Port: %d\n", port);
-          //serv_addr.sin_port = htons(port);
           strcpy(hostname, argv[2]);
-          fprintf(stderr, "%s\n", hostname);
+          //struct hostent *server;
+          //if (!sethostname(hostname, sizeof(char) * strlen(hostname))) {
+          //char buff[50] = "hostname "
+          /*
+          char sethostname[256];
+          sprintf(sethostname, "sudo hostname %s", argv[2]);
+          if (!system(sethostname)) {
+            printInternalError();
+          }
+          char test[256];
+          gethostname(test, sizeof(test));
+          */
+          fprintf(stderr, "hostname: %s\n", hostname);
         }
       } else {
-        //invalid_format();
+        invalid_format();
       }
+      if(!read_port(argc, argv, &port)) {
+        //gethostname(hostname, 255);
+        //fprintf(stderr, "Hostname: %s\n", hostname);
+        int sockfd, newsockfd, pid;
+        unsigned int clilen;
+        char buffer[256];
+        struct sockaddr_in serv_addr, cli_addr;
+        int n;
+
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        int option = 1;
+        setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+        if (sockfd < 0) {
+          printInternalError();
+        } 
+
+        bzero((char*) &serv_addr, sizeof(serv_addr));
+
+        serv_addr.sin_family = AF_INET;
+        serv_addr.sin_addr.s_addr = INADDR_ANY;
+        serv_addr.sin_port = htons(port);
+        
+        
+        if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+          printInternalError();
+        }
+        listen(sockfd, 5);
+        clilen = sizeof(cli_addr);
+        while (1) {
+          //listen(sockfd, 5);
+          newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+          if (newsockfd < 0) {
+            printInternalError();
+          }
+          if (dostuff(newsockfd)) {
+            close(newsockfd);
+            break;
+          }
+          close(newsockfd);
+        }    
+      }
+      break;
 
     case 2:
       if (argc < 4) {
-        //invalid_format();
+        invalid_format();
       } else if (argc == 4) {
         if(!read_port(argc, argv, &port)) {
           // Do something
-          //fprintf(stderr, "Port: %d\n", port);
-          //serv_addr.sin_port = htons(port);
         }
       } else if (argc == 5) {
         if(!read_port(argc, argv, &port)) {
           // Do something
-          //fprintf(stderr, "Port: %d\n", port);
-          //serv_addr.sin_port = htons(port);
           strcpy(hostname, argv[3]);
           fprintf(stderr, "%s\n", hostname);
         }
       } else {
-        //invalid_format();
+        invalid_format();
       }
+      break;
 
     case 3:
       if (argc < 3) {
-        //invalid_format();
+        invalid_format();
       } else if (argc == 3) {
         if(!read_port(argc, argv, &port)) {
           // Do something
-          //fprintf(stderr, "Port: %d\n", port);
-          //serv_addr.sin_port = htons(port);
         }
       } else if (argc == 4) {
         if(!read_port(argc, argv, &port)) {
           // Do something
-          //fprintf(stderr, "Port: %d\n", port);
-          //serv_addr.sin_port = htons(port);
           strcpy(hostname, argv[2]);
           fprintf(stderr, "%s\n", hostname);
         }
       } else {
-        //invalid_format();
+        invalid_format();
       }
+      break;
 
     default:
       break;

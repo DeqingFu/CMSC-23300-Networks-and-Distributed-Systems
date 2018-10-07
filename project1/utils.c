@@ -30,7 +30,8 @@ int read_port(int argc, char* argv[], int* port) {
   }
 }
 
-void error(char* msg) {
-  perror(msg);
-  exit(0);
+
+void printInternalError() {
+  fprintf(stderr, "internal error\n");
+  exit(1);
 }
