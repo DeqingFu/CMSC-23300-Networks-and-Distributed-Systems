@@ -2,30 +2,7 @@
  * CS233, Autumn 2018
  * Project 1
  */
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
 #include "utils.h"
-int dostuff (int sock)
-{
-  int n;
-  char buffer[256];
-      
-  bzero(buffer,256);
-  n = read(sock, buffer, 255);
-
-  if (strlen(buffer) == 0) {
-    return 1;
-  }          
-  if (n < 0) {
-    printf("here\n");
-    printInternalError();
-    return 1;
-  }
-  fprintf(stdout, "%s", buffer);
-  return 0;
-}
 
 int main(int argc, char* argv[]) {
   int opt;
@@ -68,7 +45,7 @@ int main(int argc, char* argv[]) {
       invalid_format();
       break;
     
-    case 0:
+    case 0: // Client TCP
       if (argc < 3) {
         invalid_format();
       } else {
@@ -128,73 +105,71 @@ int main(int argc, char* argv[]) {
       }
       break;
 
-    case 1:
+    case 1: // Server TCP
       if (argc < 3) {
         invalid_format();
       } else if (argc == 3) {
-        if(!read_port(argc, argv, &port)) {
-          //gethostname(hostname, 255);
-          //fprintf(stderr, "Hostname: %s\n", hostname);
-          int sockfd, newsockfd, pid;
-          unsigned int clilen;
-          char buffer[256];
-          struct sockaddr_in serv_addr, cli_addr;
-          int n;
-
-          sockfd = socket(AF_INET, SOCK_STREAM, 0);
-          int option = 1;
-          setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
-          if (sockfd < 0) {
-            printInternalError();
-          } 
-
-          bzero((char*) &serv_addr, sizeof(serv_addr));
-
-          serv_addr.sin_family = AF_INET;
-          serv_addr.sin_addr.s_addr = INADDR_ANY;
-          serv_addr.sin_port = htons(port);
-          
-          
-          if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-            printInternalError();
-          }
-          listen(sockfd, 5);
-          clilen = sizeof(cli_addr);
-          while (1) {
-            //listen(sockfd, 5);
-            newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
-            if (newsockfd < 0) {
-              printInternalError();
-            }
-            if (dostuff(newsockfd)) {
-              close(newsockfd);
-              break;
-            }
-            close(newsockfd);
-          }    
+        if(read_port(argc, argv, &port)) { // read port failed
+          invalid_format();
         }
       } else if (argc == 4) {
         if(!read_port(argc, argv, &port)) {
-          // Do something
           strcpy(hostname, argv[2]);
-          //struct hostent *server;
-          //if (!sethostname(hostname, sizeof(char) * strlen(hostname))) {
-          //char buff[50] = "hostname "
-          /*
-          char sethostname[256];
-          sprintf(sethostname, "sudo hostname %s", argv[2]);
-          if (!system(sethostname)) {
-            printInternalError();
-          }
-          char test[256];
-          gethostname(test, sizeof(test));
-          */
-          fprintf(stderr, "hostname: %s\n", hostname);
+          //fprintf(stderr, "hostname: %s\n", hostname);
         }
       } else {
         invalid_format();
       }
 
+      /* main server functionalities, TCP */
+      int sockfd, newsockfd, pid;
+      unsigned int clilen;
+      char buffer[256];
+      struct sockaddr_in serv_addr, cli_addr;
+      int n;
+
+      sockfd = socket(AF_INET, SOCK_STREAM, 0);
+      int option = 1;
+      setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+      if (sockfd < 0) {
+        printInternalError();
+      } 
+
+      bzero((char*) &serv_addr, sizeof(serv_addr));
+      serv_addr.sin_family = AF_INET;
+      serv_addr.sin_addr.s_addr = INADDR_ANY;
+      serv_addr.sin_port = htons(port);
+      
+      if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        printInternalError();
+      }
+      listen(sockfd, 5);
+      clilen = sizeof(cli_addr);
+
+      while (1) {
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        //fprintf(stderr, "%s\n", cli_addr.sin_addr);
+        if (strlen(hostname) != 0) {
+          char target_ip[128];
+          hostname_to_ip(hostname, target_ip);
+          //fprintf(stderr, "target ip: %s\n", target_ip);
+          char client_ip[128];
+          strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
+          //fprintf(stderr, "client ip: %s\n", client_ip);
+          if (strcmp(client_ip, target_ip)) {
+            continue;
+          }
+        }
+        if (newsockfd < 0) {
+          printInternalError();
+        }
+
+        if (server_read_and_print(newsockfd)) {
+          close(newsockfd);
+          break;
+        }
+        close(newsockfd);
+      }    
       break;
 
     case 2:
