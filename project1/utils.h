@@ -20,3 +20,7 @@ int server_read_and_print (int sock);
 void printInternalError();
 
 int hostname_to_ip(char * hostname , char* ip);
+
+void TCP_server(int port, char* hostname);
+
+void TCP_client(int port, char* hostname);

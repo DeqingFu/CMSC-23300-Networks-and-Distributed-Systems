@@ -1,6 +1,6 @@
 #include "utils.h"
 void invalid_format() {
-  fprintf(stderr, "invalid or missing options\nusage: snc [­l] [­u] [hostname] port\n");
+  fprintf(stderr, "invalid or missing options\nusage: snc [-l] [-u] [hostname] port\n");
 }
 
 int is_numeric(char* input) {
@@ -78,4 +78,98 @@ int hostname_to_ip(char * hostname , char* ip)
   }
   
   return 1;
+}
+
+void TCP_server(int port, char* hostname) {
+  int sockfd, newsockfd;
+  unsigned int clilen;
+  char buffer[256];
+  struct sockaddr_in serv_addr, cli_addr;
+  int n;
+
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  int socket_option = 1;
+  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &socket_option, sizeof(socket_option));
+  if (sockfd < 0) {
+    printInternalError();
+  } 
+
+  bzero((char*) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_addr.s_addr = INADDR_ANY;
+  serv_addr.sin_port = htons(port);
+  
+  if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+    printInternalError();
+  }
+  listen(sockfd, 5);
+  clilen = sizeof(cli_addr);
+  newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+  if (newsockfd < 0) {
+    printInternalError();
+  }
+  while (1) {
+    //fprintf(stderr, "%s\n", cli_addr.sin_addr);
+    if (strlen(hostname) != 0) {
+      char target_ip[128];
+      hostname_to_ip(hostname, target_ip);
+      //fprintf(stderr, "target ip: %s\n", target_ip);
+      char client_ip[128];
+      strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
+      //fprintf(stderr, "client ip: %s\n", client_ip);
+      if (strcmp(client_ip, target_ip)) {
+        continue;
+      }
+    }
+
+    if (server_read_and_print(newsockfd)) {
+      close(newsockfd);
+      break;
+    }
+    
+  }
+  close(newsockfd);
+}
+
+
+void TCP_client(int port, char* hostname) {
+  int sockfd, n;
+  struct sockaddr_in serv_addr;
+  struct hostent *server;
+  char buffer[256];
+  /* Create a socket point */
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  int option = 1;
+  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+  if (sockfd < 0) {
+    printInternalError();
+  }
+  server = gethostbyname(hostname);
+   
+  if (server == NULL) {
+    printf("here\n");
+    printInternalError();
+  }
+   
+  bzero((char *) &serv_addr, sizeof(serv_addr));
+  serv_addr.sin_family = AF_INET;
+  bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
+  serv_addr.sin_port = htons(port);
+  /* Now connect to the server */
+  if (connect(sockfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+    printInternalError();
+  }
+  while (1) {
+    bzero(buffer,256);
+    char* ret = fgets(buffer,255,stdin);
+    if (ret == NULL) {
+      close(sockfd); 
+      exit(0);
+    }
+    n = write(sockfd, buffer, strlen(buffer));
+    if (n < 0) {
+      printInternalError();
+    }
+  }
+  close(sockfd); 
 }
