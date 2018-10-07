@@ -15,12 +15,10 @@ int is_numeric(char* input);
 
 int read_port(int argc, char* argv[], int* port);
 
-int server_read_and_print (int sock);
+int server_read_and_print (int sock, char flag);
 
 void printInternalError();
 
 int hostname_to_ip(char * hostname , char* ip);
 
-void TCP_server(int port, char* hostname);
 
-void TCP_client(int port, char* hostname);

@@ -3,7 +3,8 @@
  * Project 1
  */
 #include "utils.h"
-
+#include "client.h"
+#include "server.h"
 int main(int argc, char* argv[]) {
   int opt;
   int option = 0; // Options to deal with -l -n options
@@ -52,8 +53,9 @@ int main(int argc, char* argv[]) {
         if (!(read_port(argc, argv, &port))) {
           // Do something
           strcpy(hostname, argv[1]);
-          TCP_client(port, hostname);
+          client_function(port, hostname, 0);
         } else {
+          invalid_format();
           break;
         }
       }
@@ -69,49 +71,56 @@ int main(int argc, char* argv[]) {
       } else if (argc == 4) {
         if(!read_port(argc, argv, &port)) {
           strcpy(hostname, argv[2]);
-          //fprintf(stderr, "hostname: %s\n", hostname);
+        } else {
+          invalid_format();
         }
       } else {
         invalid_format();
       }
       /* main server functionalities, TCP */
-      TCP_server(port, hostname);
+      server_function(port, hostname, 0);
       break;
 
-    case 2:
+    case 2: // Server UDP
       if (argc < 4) {
         invalid_format();
       } else if (argc == 4) {
-        if(!read_port(argc, argv, &port)) {
-          // Do something
+        if(read_port(argc, argv, &port)) { // read port failed
+          invalid_format();
         }
       } else if (argc == 5) {
         if(!read_port(argc, argv, &port)) {
           // Do something
           strcpy(hostname, argv[3]);
-          fprintf(stderr, "%s\n", hostname);
+          //fprintf(stderr, "%s\n", hostname);
+        } else {
+          invalid_format();
         }
       } else {
         invalid_format();
       }
+      server_function(port, hostname, 1);
       break;
 
-    case 3:
+    case 3: // clinet UDP
       if (argc < 3) {
         invalid_format();
       } else if (argc == 3) {
-        if(!read_port(argc, argv, &port)) {
-          // Do something
+        if(read_port(argc, argv, &port)) { // read port failed
+          invalid_format();
         }
       } else if (argc == 4) {
         if(!read_port(argc, argv, &port)) {
           // Do something
           strcpy(hostname, argv[2]);
-          fprintf(stderr, "%s\n", hostname);
+          //fprintf(stderr, "%s\n", hostname);
+        } else {
+          invalid_format();
         }
       } else {
         invalid_format();
       }
+      client_function(port, hostname, 1);
       break;
 
     default:
