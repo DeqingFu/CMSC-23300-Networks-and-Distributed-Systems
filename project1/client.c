@@ -6,7 +6,7 @@ void client_function(int port, char* hostname, char flag) {
   struct sockaddr_in serv_addr;
   struct hostent *server;
   char buffer[256];
-  char udp_buffer[1024];
+  //char udp_buffer[1024];
   /* Create a socket point */
   if (flag) {
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
@@ -71,18 +71,39 @@ void client_function(int port, char* hostname, char flag) {
     }
   }
   */
-  while (1) {
-    bzero(buffer,256);
-    char* ret = fgets(buffer,255,stdin);
-    if (ret == NULL) {
-      close(sockfd); 
-      exit(0);
+  if (flag) {
+    int sending = 1;
+    while (1) {
+      bzero(buffer,256);
+      char* ret = fgets(buffer,255,stdin);
+      if (ret == NULL) {
+        close(sockfd); 
+        //exit(0);
+        sending = 0;
+      }
+      if (sending) {
+        n = write(sockfd, buffer, strlen(buffer));
+        if (n < 0) {
+          printInternalError();
+        }
+      }
     }
+    close(sockfd); 
+  } else {
+    while (1) {
+      bzero(buffer,256);
+      char* ret = fgets(buffer,255,stdin);
+      if (ret == NULL) {
+        close(sockfd); 
+        exit(0);
+      }
 
-    n = write(sockfd, buffer, strlen(buffer));
-    if (n < 0) {
-      printInternalError();
+      n = write(sockfd, buffer, strlen(buffer));
+      if (n < 0) {
+        printInternalError();
+      }
     }
+    close(sockfd); 
   }
-  close(sockfd); 
+  
 }

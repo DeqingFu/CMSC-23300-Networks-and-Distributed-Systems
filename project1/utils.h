@@ -11,14 +11,13 @@
 
 void invalid_format();
 
+void printInternalError();
+
 int is_numeric(char* input);
 
 int read_port(int argc, char* argv[], int* port);
 
 int server_read_and_print (int sock, char flag);
 
-void printInternalError();
-
 int hostname_to_ip(char * hostname , char* ip);
-
 

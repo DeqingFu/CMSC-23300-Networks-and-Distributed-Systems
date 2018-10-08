@@ -38,11 +38,14 @@ int server_read_and_print (int sock, char flag)
   bzero(buffer,256);
   n = read(sock, buffer, 255);
 
-  if (strlen(buffer) == 0 && !flag) {
-    fprintf(stderr, "what the fuck\n");
-    return 1;
+  if (strlen(buffer) == 0) {
+    if (! flag) {
+      return 1;
+    } else {
+      return 2;
+    }
   }    
-  printf("what?\n");      
+  //printf("what?\n");      
   if (n < 0) {
     printf("here\n");
     printInternalError();

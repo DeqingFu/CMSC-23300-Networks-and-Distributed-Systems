@@ -44,18 +44,22 @@ void server_function(int port, char* hostname, char flag) {
           continue;
         }
       }
-
-      if (server_read_and_print(sockfd, flag)) {
+      int ret = server_read_and_print(sockfd, flag);
+      if (ret == 1) {
         close(sockfd);
+        break;
+      } 
+      if (ret == 2) {
+        shutdown(sockfd, 2);
         break;
       }
       
     }
-    close(sockfd);
+    
   } else {
     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
     if (newsockfd < 0) {
-      printf("hello here\n");
+      //printf("hello here\n");
       printInternalError();
     }
     while (1) {
