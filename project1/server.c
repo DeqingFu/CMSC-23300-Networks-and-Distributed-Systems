@@ -30,58 +30,51 @@ void server_function(int port, char* hostname, char flag) {
   }
   listen(sockfd, 5);
   clilen = sizeof(cli_addr);
+  /*
   if (flag) {
     while (1) {
-      //fprintf(stderr, "%s\n", cli_addr.sin_addr);
       if (strlen(hostname) != 0) {
         char target_ip[128];
         hostname_to_ip(hostname, target_ip);
-        //fprintf(stderr, "target ip: %s\n", target_ip);
         char client_ip[128];
         strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
-        //fprintf(stderr, "client ip: %s\n", client_ip);
         if (strcmp(client_ip, target_ip)) {
           continue;
         }
       }
-      int ret = server_read_and_print(sockfd, flag);
-      if (ret == 1) {
+      if(server_read_and_print(sockfd, flag)) {
         close(sockfd);
         break;
-      } 
-      if (ret == 2) {
-        shutdown(sockfd, 2);
-        break;
       }
-      
     }
-    
+  } else {
+  */
+  if (flag) {
+    newsockfd = sockfd;
   } else {
     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
     if (newsockfd < 0) {
-      //printf("hello here\n");
       printInternalError();
     }
-    while (1) {
-      //fprintf(stderr, "%s\n", cli_addr.sin_addr);
-      if (strlen(hostname) != 0) {
-        char target_ip[128];
-        hostname_to_ip(hostname, target_ip);
-        //fprintf(stderr, "target ip: %s\n", target_ip);
-        char client_ip[128];
-        strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
-        //fprintf(stderr, "client ip: %s\n", client_ip);
-        if (strcmp(client_ip, target_ip)) {
-          continue;
-        }
-      }
-
-      if (server_read_and_print(newsockfd, flag)) {
-        close(newsockfd);
-        break;
-      }
-      
-    }
-    close(newsockfd);
   }
+  while (1) {
+    if (strlen(hostname) != 0) {
+      char target_ip[128];
+      hostname_to_ip(hostname, target_ip);
+      char client_ip[128];
+      strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
+      if (strcmp(client_ip, target_ip)) {
+        continue;
+      }
+    }
+    if (server_read_and_print(newsockfd, flag)) {
+      //close(newsockfd);
+      break;
+    }
+  }
+  close(newsockfd);
+  if (!flag) {
+    close(sockfd);
+  }
+  //}
 }

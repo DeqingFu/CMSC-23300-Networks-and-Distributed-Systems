@@ -39,7 +39,7 @@ int server_read_and_print (int sock, char flag)
   n = read(sock, buffer, 255);
 
   if (strlen(buffer) == 0) {
-    if (! flag) {
+    if (!flag) {
       return 1;
     } else {
       return 2;
@@ -61,8 +61,7 @@ void printInternalError() {
 }
 
 /* source : stack overflow */
-int hostname_to_ip(char * hostname , char* ip)
-{
+int hostname_to_ip(char * hostname , char* ip) {
   struct hostent *he;
   struct in_addr **addr_list;
   int i;
@@ -71,13 +70,10 @@ int hostname_to_ip(char * hostname , char* ip)
     printInternalError();
     return 1;
   }
-
   addr_list = (struct in_addr **) he->h_addr_list;
-  
   for(i = 0; addr_list[i] != NULL; i++) {
-    strcpy(ip , inet_ntoa(*addr_list[i]) );
+    strcpy(ip , inet_ntoa(*addr_list[i]));
     return 0;
   }
-  
   return 1;
 }

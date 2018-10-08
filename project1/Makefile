@@ -9,3 +9,6 @@ client.o : client.h client.c
 
 utils.o : utils.h utils.c
 	gcc -c utils.c utils.h
+
+clean: 
+	rm *.o
