@@ -11,4 +11,4 @@ utils.o : utils.h utils.c
 	gcc -c utils.c utils.h
 
 clean: 
-	rm *.o
+	rm ./snc *.o *.gch
