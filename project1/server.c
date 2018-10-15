@@ -46,13 +46,17 @@ void server_function(int port, char* hostname, char flag) {
     }
   }
   while (1) {
-    if (strlen(hostname) != 0) {
-      char target_ip[128];
-      hostname_to_ip(hostname, target_ip);
-      char client_ip[128];
-      strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
-      if (strcmp(client_ip, target_ip)) {
-        continue;
+    if (!flag) { // check hostname 
+      // Confused about this 
+      // Use the criterion the TA replied me on Piazza https://piazza.com/class/jmfbvshx7q53l0?cid=20
+      if (strlen(hostname) != 0) {
+        char target_ip[128];
+        hostname_to_ip(hostname, target_ip);
+        char client_ip[128];
+        strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
+        if (strcmp(client_ip, target_ip)) {
+          continue;
+        }
       }
     }
     if (server_read_and_print(newsockfd, flag)) {

@@ -1,2 +1,74 @@
-Name: Deqing Fu
-CNetID: deqing
+-----------------------------------------------
+| Name: Deqing Fu                             |
+| CNetID: deqing                              |
+| The University of Chicago                   |
+| CMSC 23300 Networks and Distributed Systems |
+| Project 1                                   |
+-----------------------------------------------
+
+-- Source Codes
+  * The source codes contains 
+    ** Makefile:            "make" to generate the binary file
+                            "make clean" to clean up 
+
+    ** README:              This file
+
+    ** utils.c & utils.h    files that implements some utility functions 
+                            including: 
+                              - read and write on server
+                              - print error messages
+                              - check validity of port (numeric and bounded)
+                              - convert hostname to ip for comparison and 
+                              validity checking
+
+    ** client.c & client.h  files that implement the client functionalitie
+                            for both TCP and UDP, specified by the "flag" 
+                            vairable: flag == 1 -> UDP
+                                      flag == 0 -> TCP
+    
+    ** server.c & server.h  files that implement the server functionalities
+                            for both TCP and UDO, specified by the "flag", 
+                            same as in client.c
+
+    ** snc.c                the main function that parses inputs from stdin, 
+                            dealing with options and executing programs given 
+                            input options and information
+
+-- Compile
+  execute in the command line: $ make
+
+-- Usage & execute
+  $ ./snc [-l] [-u] [hostname] port
+    ** -l:                  specifies as the server, 
+                            if not included in options, it's the client
+
+    ** -u:                  specifies as UDP, 
+                            if not included in options, it uses TCP protocols
+    
+    ** [hostname]:          optional if -l is specified, required otherwise
+    
+    ** port:                port number, should be integer between [1025, 65535]
+
+-- Example / Functionalities
+  * Open two terminals, execute the following each 
+      Terminal_1 $ ./snc -l 8080
+      Terminal_2 $ ./snc localhost 8080
+
+  * Type in Terminal_2 (the client) 
+    and Terminal_1  (the server) will print out what you typed in Terminal_2
+
+  * If you type ctrl + D in Terminal_2
+    **  if you specified to use UDP (-u), then the connection is lost, 
+        but you can still type things in Terminal_2 (the client), 
+        but the server won't print out anything
+    **  if you use UDP (without -u option), 
+        then both the client and the server will be terminated
+
+  * Other usages and explanations:
+    **  UDP, the program will execute using UDP 
+        Terminal_1 $ ./snc -l -u 8080
+        Terminal_2 $ ./snc -u localhost 8080
+    **  Specify hostname from the server 
+        /* per TA, the server only listen to the client w/ given hostname */
+        Terminal_1 $ ./snc -l -u 127.0.0.1 8080
+        Terminal_2 $ ./snc -u 127.0.0.1 8080
