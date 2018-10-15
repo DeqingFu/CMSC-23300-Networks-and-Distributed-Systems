@@ -34,8 +34,10 @@
                             dealing with options and executing programs given 
                             input options and information
 
+
 -- Compile
   execute in the command line: $ make
+
 
 -- Usage & execute
   $ ./snc [-l] [-u] [hostname] port
@@ -49,6 +51,7 @@
     
     ** port:                port number, should be integer between [1025, 65535]
 
+
 -- Example / Functionalities
   * Open two terminals, execute the following each 
       Terminal_1 $ ./snc -l 8080
@@ -61,6 +64,7 @@
     **  if you specified to use UDP (-u), then the connection is lost, 
         but you can still type things in Terminal_2 (the client), 
         but the server won't print out anything
+    
     **  if you use UDP (without -u option), 
         then both the client and the server will be terminated
 
@@ -68,6 +72,7 @@
     **  UDP, the program will execute using UDP 
         Terminal_1 $ ./snc -l -u 8080
         Terminal_2 $ ./snc -u localhost 8080
+    
     **  Specify hostname from the server 
         /* per TA, the server only listen to the client w/ given hostname */
         Terminal_1 $ ./snc -l -u 127.0.0.1 8080
