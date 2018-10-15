@@ -1,6 +1,7 @@
 #include "utils.h"
 void invalid_format() {
   fprintf(stderr, "invalid or missing options\nusage: snc [-l] [-u] [hostname] port\n");
+  exit(0);
 }
 
 int is_numeric(char* input) {
@@ -34,7 +35,7 @@ int server_read_and_print (int sock, char flag)
 {
   int n;
   char buffer[256];
-      
+  
   bzero(buffer,256);
   n = read(sock, buffer, 255);
 

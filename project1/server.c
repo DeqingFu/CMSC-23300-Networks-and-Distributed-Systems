@@ -30,28 +30,16 @@ void server_function(int port, char* hostname, char flag) {
   }
   listen(sockfd, 5);
   clilen = sizeof(cli_addr);
-  /*
-  if (flag) {
-    while (1) {
-      if (strlen(hostname) != 0) {
-        char target_ip[128];
-        hostname_to_ip(hostname, target_ip);
-        char client_ip[128];
-        strcpy(client_ip, (char*)inet_ntoa((struct in_addr)cli_addr.sin_addr));
-        if (strcmp(client_ip, target_ip)) {
-          continue;
-        }
-      }
-      if(server_read_and_print(sockfd, flag)) {
-        close(sockfd);
-        break;
-      }
-    }
-  } else {
-  */
-  if (flag) {
+
+  if (flag) { // UDP
+    struct sockaddr addr;
+    socklen_t socklen = sizeof(addr);
+    char b[256];
+    bzero(b,256);    
+    int receive = recvfrom(sockfd, b, strlen(b), 0, (struct sockaddr *)&addr, &socklen);
+    printf("%s",b);
     newsockfd = sockfd;
-  } else {
+  } else { // TCP
     newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
     if (newsockfd < 0) {
       printInternalError();
@@ -68,7 +56,6 @@ void server_function(int port, char* hostname, char flag) {
       }
     }
     if (server_read_and_print(newsockfd, flag)) {
-      //close(newsockfd);
       break;
     }
   }
@@ -76,5 +63,4 @@ void server_function(int port, char* hostname, char flag) {
   if (!flag) {
     close(sockfd);
   }
-  //}
 }
