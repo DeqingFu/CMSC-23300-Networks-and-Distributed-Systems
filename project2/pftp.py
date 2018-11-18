@@ -1,38 +1,57 @@
+#!/usr/bin/env python
 import re
 import argparse
 import socket
 import sys, os
 from threading import Thread 
+def logging(args, logfile, msg):
+  if args.logfile:
+    if logfile:
+      logfile.write("S->C: " + msg + "\n")
+    else:
+      print("S->C: " + msg)
+      
+def send_and_log(sock, args, logfile, msg):
+  sock.send(msg.encode())
+  if args.logfile:
+    if logfile:
+      logfile.write("C->S: " + msg)
+    else:
+      print("C->S: " + msg, end = "")
 
 def main(args):
   # control connection
+  log = None
+  if args.logfile != "-" and args.logfile != None:
+    log = open(args.logfile, "w+")
+
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   try:
-    print(args.hostname, args.port)
+    #print(args.hostname, args.port)
     s.connect((args.hostname, args.port))
   except:
     s.close()
     print("Can't connect to server")
     exit(1)
+  
   portno = None
   while True:
-    recv = s.recv(128).decode()
-    print(recv, end = "")
+    recv = s.recv(128).decode()[:-1]
+    logging(args, log, recv)
     code = int(recv[0:3])
-    #print(code)
     if code == 220: # enter username
-      s.send(("USER " + args.user + "\n").encode())
+      send_and_log(s, args, log, ("USER " + args.user + "\n"))
     elif code == 331: # enter password
-      s.send(("PASS " + args.password + "\n").encode())
+      send_and_log(s, args, log, ("PASS " + args.password + "\n"))
     elif code == 230: # login successfully
-      s.send(("TYPE I\n").encode()) #binary mode
+      send_and_log(s, args, log, ("TYPE I\n")) #binary mode
     elif code == 200: 
-      s.send("PASV\n".encode())
+      send_and_log(s, args, log, "PASV\n")
     elif code == 227: # entering passive mode
       return_info = list(eval(recv.split()[-1][:-1]))
       portno = return_info[-1] + return_info[-2] * 256
-      #print(portno)
       break
+    ## error messages ##
     elif code == 530: # Login failed
       print("Authentication failed")
       s.close()
@@ -41,16 +60,26 @@ def main(args):
       print("Command not implemented by server")
       s.close()
       exit(5)
+    else:
+      print("Generic Error")
+      s.close()
+      exit(7)
   
   # data connection
   if portno: 
+    '''
+    s.send(("SIZE " + args.file + "\n").encode())
+    file_size = int(s.recv(128).decode()[4:-2])
+    print(file_size)
+    '''
     data_link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     data_link.connect((args.hostname, portno))
     local_file = open(args.file, "bw+")
     # starting to receive
-    s.send(("RETR " + args.file + "\n").encode())
-    recv = s.recv(128).decode()
-    print(recv, end = "")
+    send_and_log(s, args, log, ("RETR " + args.file + "\n"))
+    #s.send(("RETR " + args.file + "\n").encode())
+    recv = s.recv(128).decode()[:-1]
+    logging(args, log, recv)
     code = int(recv[0:3])
     if code == 550:
       print("File not found")
@@ -65,29 +94,24 @@ def main(args):
       else:
         local_file.write(recv_data)
     data_link.close()
-
     # data transferring completed
     # communicating with server and close socket
     while True:
-      recv = s.recv(128).decode()
-      print(recv, end = "")
+      recv = s.recv(128).decode()[:-1]
+      logging(args, log, recv)
+      #print(recv, end = "")
       code = int(recv[0:3])
       if code == 226:
-        s.send("QUIT\n".encode())
+        send_and_log(s, args, log, "QUIT\n")
       if code == 221:
         s.close()
-        break
-    
-  
+        break  
        
 if __name__ == "__main__":
   if len(sys.argv) == 1:
-    try:
-      os.system("python pftp.py -h")
-    except:
-      os.system("python3 pftp.py -h")
+    os.system("./pftp.py -h")
     exit(0)
-    
+  ## Parsing ##
   parser = argparse.ArgumentParser()
   # commands
   parser.add_argument("-v", "--version", help = "the version number, the author", action = "store_true")
@@ -102,7 +126,7 @@ if __name__ == "__main__":
   optional_group.add_argument("-p", "--port", help = "the prot to be used when contacting the server", default = 21, type = int, dest = "port")
   optional_group.add_argument("-n", "--username", help = "uses the username when logging into the FTP server", default = "anonymous", dest = "user")
   optional_group.add_argument("-P", "--password", help = "uses the password when logging into the FTP server", default = "user@localhost.localnet")
-  optional_group.add_argument("-m", "--mode", help = "the mode to be used for the transfer", default = "binary")
+  #optional_group.add_argument("-m", "--mode", help = "the mode to be used for the transfer", default = "binary")
   optional_group.add_argument("-l", "--log", help = "Logs all the FTP commands exchanged with the server and the corresponding replies to file LOGFILE.", dest = "logfile")
 
   # parsing arguments
@@ -117,7 +141,6 @@ if __name__ == "__main__":
     print("Syntax error in the client request")
     exit(4)
 
-  if args.logfile:
-    log = open(args.logfile, "w+")
   
+  ## Main ##
   main(args)
