@@ -10,10 +10,10 @@ def main(args):
   try:
     print(args.hostname, args.port)
     s.connect((args.hostname, args.port))
-    print("connection succeeded")
   except:
     s.close()
-    sys.exit("connection failed")
+    print("Can't connect to server")
+    exit(1)
   portno = None
   while True:
     recv = s.recv(128).decode()
@@ -24,7 +24,6 @@ def main(args):
       s.send(("USER " + args.user + "\n").encode())
     elif code == 331: # enter password
       s.send(("PASS " + args.password + "\n").encode())
-      #print(args.password)
     elif code == 230: # login successfully
       s.send(("TYPE I\n").encode()) #binary mode
     elif code == 200: 
@@ -34,13 +33,31 @@ def main(args):
       portno = return_info[-1] + return_info[-2] * 256
       #print(portno)
       break
+    elif code == 530: # Login failed
+      print("Authentication failed")
+      s.close()
+      exit(2)
+    elif code == 500: # Unkonwn command
+      print("Command not implemented by server")
+      s.close()
+      exit(5)
+  
   # data connection
   if portno: 
-    print("receiving file" + args.file)
     data_link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     data_link.connect((args.hostname, portno))
     local_file = open(args.file, "bw+")
+    # starting to receive
     s.send(("RETR " + args.file + "\n").encode())
+    recv = s.recv(128).decode()
+    print(recv, end = "")
+    code = int(recv[0:3])
+    if code == 550:
+      print("File not found")
+      data_link.close()
+      s.close()
+      exit(3)
+    # receiving data
     while True:
       recv_data = data_link.recv(1024)
       if not recv_data:
@@ -48,7 +65,20 @@ def main(args):
       else:
         local_file.write(recv_data)
     data_link.close()
-  s.close()
+
+    # data transferring completed
+    # communicating with server and close socket
+    while True:
+      recv = s.recv(128).decode()
+      print(recv, end = "")
+      code = int(recv[0:3])
+      if code == 226:
+        s.send("QUIT\n".encode())
+      if code == 221:
+        s.close()
+        break
+    
+  
        
 if __name__ == "__main__":
   if len(sys.argv) == 1:
@@ -81,10 +111,11 @@ if __name__ == "__main__":
   # main process
   if args.version:
     print("FTP, version 0.1, Deqing Fu")
-    sys.exit()
+    exit(0)
   
   if args.file == None or args.hostname == None:
-    sys.exit("Requiring File name and Server name")
+    print("Syntax error in the client request")
+    exit(4)
 
   if args.logfile:
     log = open(args.logfile, "w+")
