@@ -8,4 +8,41 @@
 Language used: Python 3; 
 To make sure the file pftp.py is executable, please execute this command first: $ chmod +x ./pftp.py
 
+Usage: 
+  * You can use the command $ ./pftp.py -h or $ ./pftp.py --help to see the usage:
+            usage: pftp.py [-h] [-v] [-f FILE] [-s HOSTNAME] [-p PORT] [-n USER]
+                      [-P PASSWORD] [-l LOGFILE] [-t CONFIG]
+
+            optional arguments:
+              -h, --help            show this help message and exit
+              -v, --version         the version number, the author
+
+            Require Arguments:
+              -f FILE, --file FILE  the file to download
+              -s HOSTNAME, --server HOSTNAME
+                                    the server to download the file from
+
+            Options:
+              -p PORT, --port PORT  the prot to be used when contacting the server
+              -n USER, --username USER
+                                    uses the username when logging into the FTP server
+              -P PASSWORD, --password PASSWORD
+                                    uses the password when logging into the FTP server
+              -l LOGFILE, --log LOGFILE
+                                    logs all the FTP commands exchanged with the server
+                                    and the corresponding replies to file LOGFILE.
+              -t CONFIG, --thread CONFIG
+                                    get the config file, and run multi-threaded version 
+  * Example specific to this project: 
+    - Single Threaded
+        $ ./pftp.py -f lecture8.pdf -s ftp1.cs.uchicago.edu -n cs23300 -P youcandoit -l -
+        Which will download the file lecture8.pdf from the server and print the log to stdout
+    - Multi Threaded
+        You can firstly created a config file (called config) containing information such as:
+              ftp://cs23300:youcandoit@ftp1.cs.uchicago.edu/lecture8.pdf
+              ftp://sockprogramming:rocks@ftp2.cs.uchicago.edu/lecture8.pdf
+        Then you use the command such as:
+        $ ./pftp.py -t config -l .log
+        which will download the file lecture8.pdf from both servers parallelly,
+          and create and log to file called .log 
 
