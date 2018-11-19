@@ -4,6 +4,7 @@ import argparse
 import socket
 import sys, os
 from threading import Thread 
+import time
 def logging(args, logfile, msg):
   if args.logfile:
     if logfile:
@@ -171,12 +172,10 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
       recv_data = data_link.recv(512)
       recv_len += len(recv_data)
       local_file.write(recv_data)
-      print(thread_id, offset + recv_len)
       if not recv_data:
           break
       if recv_len > block_size:
         break
-      
     #print(thread_id, recv_len)
     data_link.close()
     # data transferring completed
@@ -185,7 +184,7 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
       recv = s.recv(128).decode()[:-1]
       logging(args, log, recv)
       code = int(recv[0:3])
-      if code == 226:
+      if code == 426 or code == 226:
         send_and_log(s, args, log, "QUIT\n")
       if code == 221:
         s.close()
@@ -226,7 +225,6 @@ if __name__ == "__main__":
     print("Syntax error in the client request")
     exit(4)
 
-  
   ## Main ##
   if args.config: # Multithreading 
     #creating logfile
@@ -246,8 +244,6 @@ if __name__ == "__main__":
         N += 1
     ## First control connection ## Asking for size of the file
     filename, hostname, username, password = parse_config_line(lines[0])
-    print(filename, hostname, username, password)
-    ## control connection ##
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
       s.connect((hostname, args.port))
@@ -283,6 +279,8 @@ if __name__ == "__main__":
       t.start()
     for t in thread_list:
       t.join()
-    
+    if log:
+      log.close()
+
   else:
     single_threaded_main(args)
