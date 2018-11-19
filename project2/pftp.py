@@ -34,9 +34,9 @@ def single_threaded_main(args):
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   try:
     if log:
-      log.write("S->C: Connect to Server: " + args.hostname + "\n")
+      log.write("C->S: Connect to Server: " + args.hostname + "\n")
     elif args.logfile == "-":
-      print("S->C: Connect to Server: " + args.hostname + "\n", end = "")
+      print("C->S: Connect to Server: " + args.hostname + "\n", end = "")
     else:
       pass
     s.connect((args.hostname, args.port))
@@ -130,9 +130,9 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
   try:
     s.connect((hostname, args.port))
     if log_file:
-      log_file.write("Thread " + str(thread_id) + ": S->C: Connect to Server: " + hostname + "\n")
+      log_file.write("Thread " + str(thread_id) + ": C->S: Connect to Server: " + hostname + "\n")
     elif args.logfile == "-":
-      print("Thread " + str(thread_id) + ": S->C: Connect to Server: " + hostname + "\n", end = "")
+      print("Thread " + str(thread_id) + ": C->S: Connect to Server: " + hostname + "\n", end = "")
   except:
     s.close()
     sys.stderr.write("Thread " + str(thread_id) + ": Can't connect to server\n")

@@ -76,7 +76,7 @@ Design Choices:
       9. Verify the size and exit program
   - Log:
     -- For single threaded log, here is one example:
-            S->C: Connect to Server: ftp2.cs.uchicago.edu
+            C->S: Connect to Server: ftp2.cs.uchicago.edu
             S->C: 220 Authorized Users Only
             C->S: USER sockprogramming
             S->C: 331 Please specify the password.
@@ -85,7 +85,7 @@ Design Choices:
             C->S: TYPE I
             S->C: 200 Switching to Binary mode.
             C->S: PASV
-            S->C: 227 Entering Passive Mode (128,135,164,133,115,119).
+            S->C: 227 Entering Passive Mode (128,135,164,133,160,110).
             C->S: RETR lecture8.pdf
             S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
             S->C: 226 Transfer complete.
@@ -103,39 +103,39 @@ Design Choices:
             S->C: 213 6962411
             Starting Thread: 0
             Starting Thread: 1
-            Thread 0: S->C: Connect to Server: ftp1.cs.uchicago.edu
-            Thread 1: S->C: Connect to Server: ftp2.cs.uchicago.edu
-            Thread 1: S->C: 220 Authorized Users Only
-            Thread 1: C->S: USER sockprogramming
+            Thread 0: C->S: Connect to Server: ftp1.cs.uchicago.edu
+            Thread 1: C->S: Connect to Server: ftp2.cs.uchicago.edu
             Thread 0: S->C: 220 Authorized Users Only
             Thread 0: C->S: USER cs23300
-            Thread 1: S->C: 331 Please specify the password.
-            Thread 1: C->S: PASS rocks
             Thread 0: S->C: 331 Please specify the password.
             Thread 0: C->S: PASS youcandoit
+            Thread 1: S->C: 220 Authorized Users Only
+            Thread 1: C->S: USER sockprogramming
+            Thread 1: S->C: 331 Please specify the password.
+            Thread 1: C->S: PASS rocks
             Thread 0: S->C: 230 Login successful.
             Thread 0: C->S: TYPE I
             Thread 0: S->C: 200 Switching to Binary mode.
             Thread 0: C->S: PASV
-            Thread 0: S->C: 227 Entering Passive Mode (128,135,164,127,131,227).
+            Thread 0: S->C: 227 Entering Passive Mode (128,135,164,127,37,33).
             Thread 0: C->S: REST 0
             Thread 0: S->C: 350 Restart position accepted (0).
             Thread 0: C->S: RETR lecture8.pdf
+            Thread 0: S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
             Thread 1: S->C: 230 Login successful.
             Thread 1: C->S: TYPE I
-            Thread 0: S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
             Thread 1: S->C: 200 Switching to Binary mode.
             Thread 1: C->S: PASV
-            Thread 1: S->C: 227 Entering Passive Mode (128,135,164,133,172,205).
+            Thread 1: S->C: 227 Entering Passive Mode (128,135,164,133,151,121).
             Thread 1: C->S: REST 3481205
             Thread 1: S->C: 350 Restart position accepted (3481205).
             Thread 1: C->S: RETR lecture8.pdf
             Thread 1: S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
-            Thread 1: S->C: 226 Transfer complete.
-            Thread 1: C->S: QUIT
-            Thread 1: S->C: 221 Goodbye.
             Thread 0: S->C: 426 Failure writing network stream.
             Thread 0: C->S: QUIT
             Thread 0: S->C: 221 Goodbye.
             Joining Thread: 0
+            Thread 1: S->C: 226 Transfer complete.
+            Thread 1: C->S: QUIT
+            Thread 1: S->C: 221 Goodbye.
             Joining Thread: 1
