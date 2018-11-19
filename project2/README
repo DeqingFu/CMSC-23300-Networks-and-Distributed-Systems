@@ -56,6 +56,14 @@ Design Choices:
       everything is completed, I conduct the file verification by comparing the size of the file on
       the server and that the client just received and wrote locally
   - Multi-Threading design choices (in detailed steps):
+      0.  0.0 Assume the lines in the config file are well-written! 
+          0.1 Assume the lines in the config file all represent the same file!
+          0.2 Assume the servers are all connectable 
+              If not, then the downloaded file would not be complete
+                and both "Can't connect to server" and "Generic Error" 
+                messages would be received 
+          0.3 Assume the file on all servers in the config file are IDENTICAL
+              Else, the downloaded file would make no sense at all
       1. Parse from the config file to get the exact file name that we want to download
       2. Also parse from config to get hostname, username, password and number of servers (S)
       3. Start a connection to the first server
