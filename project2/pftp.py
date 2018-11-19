@@ -263,6 +263,12 @@ if __name__ == "__main__":
     filename, hostname, username, password = parse_config_line(lines[0])
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
+      if log:
+        log.write("C->S: Connect to Server: " + hostname + "\n")
+      elif args.logfile == "-":
+        print("C->S: Connect to Server: " + hostname + "\n", end = "")
+      else:
+        pass
       s.connect((hostname, args.port))
     except:
       s.close()

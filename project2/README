@@ -94,6 +94,7 @@ Design Choices:
     -- For multi threaded log, I would specify the thread_id at first if multi-threading starts.
         Note: at first when we asks for file size to server, it runs in the main thread, thus no 
         thread_id will be displayed. Here is one example:
+            C->S: Connect to Server: ftp1.cs.uchicago.edu
             S->C: 220 Authorized Users Only
             C->S: USER cs23300
             S->C: 331 Please specify the password.
