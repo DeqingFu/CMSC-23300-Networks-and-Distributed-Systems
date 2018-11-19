@@ -4,21 +4,26 @@ import argparse
 import socket
 import sys, os
 from threading import Thread 
+from threading import Lock
 import time
 def logging(args, logfile, msg):
   if args.logfile:
-    if logfile:
-      logfile.write("S->C: " + msg + "\n")
-    else:
-      print("S->C: " + msg)
+    lock = Lock()
+    with lock:
+      if logfile:
+        logfile.write("S->C: " + msg + "\n")
+      else:
+        print("S->C: " + msg)
       
 def send_and_log(sock, args, logfile, msg):
   sock.send(msg.encode())
   if args.logfile:
-    if logfile:
-      logfile.write("C->S: " + msg)
-    else:
-      print("C->S: " + msg, end = "")
+    lock = Lock()
+    with lock:
+      if logfile:
+        logfile.write("C->S: " + msg)
+      else:
+        print("C->S: " + msg, end = "")
 
 def single_threaded_main(args):
   ## log file creation ##
