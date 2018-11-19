@@ -6,24 +6,24 @@ import sys, os
 from threading import Thread 
 from threading import Lock
 import time
-def logging(args, logfile, msg):
+def logging(args, logfile, msg, thread_id = -1):
   if args.logfile:
     lock = Lock()
     with lock:
       if logfile:
-        logfile.write("S->C: " + msg + "\n")
+        logfile.write(("Thread " + str(thread_id) + ": " if thread_id >= 0 else "") + "S->C: " + msg + "\n")
       else:
-        print("S->C: " + msg)
+        print(("Thread " + str(thread_id) + ": " if thread_id >= 0 else "") + "S->C: " + msg + "\n", end = "")
       
-def send_and_log(sock, args, logfile, msg):
+def send_and_log(sock, args, logfile, msg, thread_id = -1):
   sock.send(msg.encode())
   if args.logfile:
     lock = Lock()
     with lock:
       if logfile:
-        logfile.write("C->S: " + msg)
+        logfile.write(("Thread " + str(thread_id) + ": " if thread_id >= 0 else "") + "C->S: " + msg)
       else:
-        print("C->S: " + msg, end = "")
+        print(("Thread " + str(thread_id) + ": " if thread_id >= 0 else "") + "C->S: " + msg, end = "")
 
 def single_threaded_main(args):
   ## log file creation ##
@@ -33,39 +33,46 @@ def single_threaded_main(args):
   ## control connection ##
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   try:
+    if log:
+      log.write("S->C: Connect to Server: " + args.hostname + "\n")
+    elif args.logfile == "-":
+      print("S->C: Connect to Server: " + args.hostname + "\n", end = "")
+    else:
+      pass
     s.connect((args.hostname, args.port))
+    
   except:
     s.close()
-    print("Can't connect to server")
+    sys.stderr.write("Can't connect to server: " + args.hostname + "\n")
     exit(1)
   portno = None
   while True:
-    recv = s.recv(128).decode()[:-1]
+    recv = s.recv(128).decode().strip()
     logging(args, log, recv)
     code = int(recv[0:3])
     if code == 220: # enter username
       send_and_log(s, args, log, ("USER " + args.user + "\n"))
     elif code == 331: # enter password
       send_and_log(s, args, log, ("PASS " + args.password + "\n"))
-    elif code == 230: # login successfully
+    elif code == 230: # login successfully -> switch to binary mode
       send_and_log(s, args, log, ("TYPE I\n")) #binary mode
-    elif code == 200: 
+    elif code == 200:  
       send_and_log(s, args, log, "PASV\n")
-    elif code == 227: # entering passive mode
+    elif code == 227: # entering passive mode -> get port number
       return_info = list(eval(recv.split()[-1][:-1]))
       portno = return_info[-1] + return_info[-2] * 256
       break
     ## error messages ##
     elif code == 530: # Login failed
-      print("Authentication failed")
+      sys.stderr.write("Authentication failed\n")
       s.close()
       exit(2)
     elif code == 500: # Unkonwn command
-      print("Command not implemented by server")
+      sys.stderr.write("Command not implemented by server\n")
       s.close()
       exit(5)
     else:
-      print("Generic Error")
+      sys.stderr.write("Generic Error\n")
       s.close()
       exit(7)
   ## data connection ##
@@ -79,9 +86,10 @@ def single_threaded_main(args):
     logging(args, log, recv)
     code = int(recv[0:3])
     if code == 550:
-      print( "File not found")
+      sys.stderr.write("File not found\n")
       data_link.close()
       s.close()
+      os.remove(args.file)
       exit(3)
     # receiving data
     while True:
@@ -121,40 +129,44 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   try:
     s.connect((hostname, args.port))
+    if log_file:
+      log_file.write("Thread " + str(thread_id) + ": S->C: Connect to Server: " + hostname + "\n")
+    elif args.logfile == "-":
+      print("Thread " + str(thread_id) + ": S->C: Connect to Server: " + hostname + "\n", end = "")
   except:
     s.close()
-    print("Can't connect to server")
+    sys.stderr.write("Thread " + str(thread_id) + ": Can't connect to server\n")
     exit(1)
   portno = None
   while True:
     recv = s.recv(128).decode()[:-1]
-    logging(args, log, recv)
+    logging(args, log, recv, thread_id)
     code = int(recv[0:3])
     if code == 220: # enter username
-      send_and_log(s, args, log, ("USER " + username + "\n"))
+      send_and_log(s, args, log, ("USER " + username + "\n"), thread_id)
     elif code == 331: # enter password
-      send_and_log(s, args, log, ("PASS " + password + "\n"))
+      send_and_log(s, args, log, ("PASS " + password + "\n"), thread_id)
     elif code == 230: # login successfully
-      send_and_log(s, args, log, ("TYPE I\n")) #binary mode
+      send_and_log(s, args, log, ("TYPE I\n"), thread_id) #binary mode
     elif code == 200: 
-      send_and_log(s, args, log, "PASV\n")
+      send_and_log(s, args, log, "PASV\n", thread_id)
     elif code == 227: # entering passive mode
       return_info = list(eval(recv.split()[-1][:-1]))
       portno = return_info[-1] + return_info[-2] * 256
-      send_and_log(s, args, log, ("REST " + str(offset) + "\n"))
+      send_and_log(s, args, log, ("REST " + str(offset) + "\n"), thread_id)
     elif code == 350:
       break
     ## error messages ##
     elif code == 530: # Login failed
-      print("Authentication failed")
+      sys.stderr.write("Thread " + str(thread_id) + ": Authentication failed\n")
       s.close()
       exit(2)
     elif code == 500: # Unkonwn command
-      print("Command not implemented by server")
+      sys.stderr.write("Thread " + str(thread_id) + ": Command not implemented by server\n")
       s.close()
       exit(5)
     else:
-      print("Generic Error")
+      sys.stderr.write("Thread " + str(thread_id) + ": Generic Error\n")
       s.close()
       exit(7)
   ## data connection ##
@@ -162,12 +174,12 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
     data_link = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     data_link.connect((hostname, portno))
     # starting to receive
-    send_and_log(s, args, log, ("RETR " + filename + "\n"))
+    send_and_log(s, args, log, ("RETR " + filename + "\n"), thread_id)
     recv = s.recv(128).decode()[:-1]
-    logging(args, log, recv)
+    logging(args, log, recv, thread_id)
     code = int(recv[0:3])
     if code == 550:
-      print("Thread", thread_id,"File not found")
+      sys.stderr.write("Thread " + str(thread_id) + " :File not found\n")
       data_link.close()
       s.close()
       exit(3)
@@ -181,16 +193,16 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
           break
       if recv_len > block_size:
         break
-    #print(thread_id, recv_len)
+    
     data_link.close()
     # data transferring completed
     # communicating with server and close socket
     while True:
       recv = s.recv(128).decode()[:-1]
-      logging(args, log, recv)
+      logging(args, log, recv, thread_id)
       code = int(recv[0:3])
       if code == 426 or code == 226:
-        send_and_log(s, args, log, "QUIT\n")
+        send_and_log(s, args, log, "QUIT\n", thread_id)
       if code == 221:
         s.close()
         break  
@@ -227,7 +239,7 @@ if __name__ == "__main__":
     exit(0)
   
   if (args.file == None or args.hostname == None) and args.config == None:
-    print("Syntax error in the client request")
+    sys.stderr.write("Syntax error in the client request\n")
     exit(4)
 
   ## Main ##
@@ -254,7 +266,7 @@ if __name__ == "__main__":
       s.connect((hostname, args.port))
     except:
       s.close()
-      print("Can't connect to server")
+      sys.stderr.write("Can't connect to server\n")
       exit(1)
     file_size = 0
     while True:
@@ -265,7 +277,7 @@ if __name__ == "__main__":
         send_and_log(s, args, log, ("USER " + username + "\n"))
       elif code == 331: # enter password
         send_and_log(s, args, log, ("PASS " + password + "\n"))
-      elif code == 230: # login successfully
+      elif code == 230: # login successfully -> ask for size
         send_and_log(s, args, log, ("SIZE " + filename + "\n"))
       elif code == 213: # get file size successfully
         file_size = int(recv.split()[1])
@@ -280,10 +292,21 @@ if __name__ == "__main__":
     block_size = file_size // N
     for i in range(N):
       t = Thread(target=multi_threaded_worker, args=(args, lines, i, block_size, log, N, file_size))
+      if log:
+        log.write("Starting Thread: " + str(i) + "\n")
+      elif args.logfile == "-":
+        print("Starting Thread: " + str(i) + "\n", end = "")
       thread_list.append(t)
       t.start()
-    for t in thread_list:
+    
+    for i in range(N):
+      t = thread_list[i]
       t.join()
+      if log:
+        log.write("Joining Thread: " + str(i) + "\n")
+      elif args.logfile == "-":
+        print("Joining Thread: " + str(i) + "\n", end = "")
+      
     if log:
       log.close()
 
