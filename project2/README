@@ -46,3 +46,96 @@ Usage:
         which will download the file lecture8.pdf from both servers parallelly,
           and create and log to file called .log 
 
+Design Choices:
+  - I separated single threaded worker and multi-threaded worker for the readability of codes 
+      bacause there might be some senarios where only multi-threading should deal with
+  - In terms of error code, if the client receives code 226 (transmission completed) 
+      or code 426 (failure writing network stream), the client would sent the QUIT command to
+      the server. Because for my testing, though the client receives 426 some time, it still completes
+      the file transmitting. In order to make sure the file received is the file on the server, after
+      everything is completed, I conduct the file verification by comparing the size of the file on
+      the server and that the client just received and wrote locally
+  - Multi-Threading design choices (in detailed steps):
+      1. Parse from the config file to get the exact file name that we want to download
+      2. Also parse from config to get hostname, username, password and number of servers (S)
+      3. Start a connection to the first server
+      4. Using command [SIZE filename] to get the size (N) of the file we want
+      5. Close the connection 
+      6. Locally create a local file with name [filename] and pad it with N zero bytes
+      7. Now we starts S threads, each reading roughly [N/S] (round down) bytes from the server 
+      8. For each thread:
+          * if it is the last thread (thread id S-1), the number of bytes it need to download is 
+              N - [N/S] * (S-1)
+          * compute the offset of the file it needs to read from and the offset is 
+              thread_id * [N/S] 
+          * use the command [REST offset] to set the offset on the server
+          * set of the offset of the local file, which it writes to, using the command seek()
+          * read from server and write to local file
+          * when the number of bytes read exceed its block size, terminate
+          * close connection and file descriptor 
+      9. Verify the size and exit program
+  - Log:
+    -- For single threaded log, here is one example:
+            S->C: Connect to Server: ftp2.cs.uchicago.edu
+            S->C: 220 Authorized Users Only
+            C->S: USER sockprogramming
+            S->C: 331 Please specify the password.
+            C->S: PASS rocks
+            S->C: 230 Login successful.
+            C->S: TYPE I
+            S->C: 200 Switching to Binary mode.
+            C->S: PASV
+            S->C: 227 Entering Passive Mode (128,135,164,133,115,119).
+            C->S: RETR lecture8.pdf
+            S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
+            S->C: 226 Transfer complete.
+            C->S: QUIT
+            S->C: 221 Goodbye.
+    -- For multi threaded log, I would specify the thread_id at first if multi-threading starts.
+        Note: at first when we asks for file size to server, it runs in the main thread, thus no 
+        thread_id will be displayed. Here is one example:
+            S->C: 220 Authorized Users Only
+            C->S: USER cs23300
+            S->C: 331 Please specify the password.
+            C->S: PASS youcandoit
+            S->C: 230 Login successful.
+            C->S: SIZE lecture8.pdf
+            S->C: 213 6962411
+            Starting Thread: 0
+            Starting Thread: 1
+            Thread 0: S->C: Connect to Server: ftp1.cs.uchicago.edu
+            Thread 1: S->C: Connect to Server: ftp2.cs.uchicago.edu
+            Thread 1: S->C: 220 Authorized Users Only
+            Thread 1: C->S: USER sockprogramming
+            Thread 0: S->C: 220 Authorized Users Only
+            Thread 0: C->S: USER cs23300
+            Thread 1: S->C: 331 Please specify the password.
+            Thread 1: C->S: PASS rocks
+            Thread 0: S->C: 331 Please specify the password.
+            Thread 0: C->S: PASS youcandoit
+            Thread 0: S->C: 230 Login successful.
+            Thread 0: C->S: TYPE I
+            Thread 0: S->C: 200 Switching to Binary mode.
+            Thread 0: C->S: PASV
+            Thread 0: S->C: 227 Entering Passive Mode (128,135,164,127,131,227).
+            Thread 0: C->S: REST 0
+            Thread 0: S->C: 350 Restart position accepted (0).
+            Thread 0: C->S: RETR lecture8.pdf
+            Thread 1: S->C: 230 Login successful.
+            Thread 1: C->S: TYPE I
+            Thread 0: S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
+            Thread 1: S->C: 200 Switching to Binary mode.
+            Thread 1: C->S: PASV
+            Thread 1: S->C: 227 Entering Passive Mode (128,135,164,133,172,205).
+            Thread 1: C->S: REST 3481205
+            Thread 1: S->C: 350 Restart position accepted (3481205).
+            Thread 1: C->S: RETR lecture8.pdf
+            Thread 1: S->C: 150 Opening BINARY mode data connection for lecture8.pdf (6962411 bytes).
+            Thread 1: S->C: 226 Transfer complete.
+            Thread 1: C->S: QUIT
+            Thread 1: S->C: 221 Goodbye.
+            Thread 0: S->C: 426 Failure writing network stream.
+            Thread 0: C->S: QUIT
+            Thread 0: S->C: 221 Goodbye.
+            Joining Thread: 0
+            Joining Thread: 1
