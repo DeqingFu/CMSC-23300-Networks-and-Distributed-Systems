@@ -309,6 +309,12 @@ if __name__ == "__main__":
       
     if log:
       log.close()
+    # Verifying that the size of receiving file matches the size from server
+    received_size = os.path.getsize(filename)
+    if received_size < file_size:
+      os.remove(filename)
+      sys.stderr.write("Generic Error: File Received is incomplete\n")
+      exit(7)
 
-  else:
+  else: # Single Threading
     single_threaded_main(args)
