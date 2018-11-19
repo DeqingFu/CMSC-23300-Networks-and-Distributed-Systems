@@ -71,6 +71,10 @@ def single_threaded_main(args):
       sys.stderr.write("Command not implemented by server\n")
       s.close()
       exit(5)
+    elif code == 503: # Operation not allowed by server
+      sys.stderr.write("Operation not allowed by server\n")
+      s.close()
+      exit(6)
     else:
       sys.stderr.write("Generic Error\n")
       s.close()
@@ -165,6 +169,10 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
       sys.stderr.write("Thread " + str(thread_id) + ": Command not implemented by server\n")
       s.close()
       exit(5)
+    elif code == 503: # Operation not allowed by server
+      sys.stderr.write("Thread " + str(thread_id) + ": Operation not allowed by server\n")
+      s.close()
+      exit(6)
     else:
       sys.stderr.write("Thread " + str(thread_id) + ": Generic Error\n")
       s.close()
