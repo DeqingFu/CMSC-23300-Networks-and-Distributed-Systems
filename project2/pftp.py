@@ -161,7 +161,7 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
       try:
         return_info = list(eval(recv.split()[-1][:-1]))
       except:
-        return_info = list(eval(recv.split()[-1][:-1]))
+        return_info = list(eval(recv.split()[-1]))
       portno = return_info[-1] + return_info[-2] * 256
       send_and_log(s, args, log, ("REST " + str(offset) + "\n"), thread_id)
     elif code == 350:
