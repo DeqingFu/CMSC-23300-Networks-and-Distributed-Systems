@@ -60,9 +60,9 @@ def single_threaded_main(args):
       send_and_log(s, args, log, "PASV\n")
     elif code == 227: # entering passive mode -> get port number
       try:
-        return_info = list(eval(recv.split()[-1][:-1]))
+        return_info = list(eval(recv.split()[-1][:-1])) # has period sign 
       except:
-        return_info = list(eval(recv.split()[-1]))
+        return_info = list(eval(recv.split()[-1])) # no period sign
       portno = return_info[-1] + return_info[-2] * 256
       break
     ## error messages ##
@@ -159,9 +159,9 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
       send_and_log(s, args, log, "PASV\n", thread_id)
     elif code == 227: # entering passive mode
       try:
-        return_info = list(eval(recv.split()[-1][:-1]))
+        return_info = list(eval(recv.split()[-1][:-1])) # has period sign
       except:
-        return_info = list(eval(recv.split()[-1]))
+        return_info = list(eval(recv.split()[-1])) # no period sign
       portno = return_info[-1] + return_info[-2] * 256
       send_and_log(s, args, log, ("REST " + str(offset) + "\n"), thread_id)
     elif code == 350:
