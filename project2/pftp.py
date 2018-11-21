@@ -89,7 +89,7 @@ def single_threaded_main(args):
     local_file = open(args.file, "bw+")
     # starting to receive
     send_and_log(s, args, log, ("RETR " + args.file + "\n"))
-    recv = s.recv(128).decode()[:-1]
+    recv = s.recv(128).decode().strip()
     logging(args, log, recv)
     code = int(recv[0:3])
     if code == 550:
@@ -109,7 +109,7 @@ def single_threaded_main(args):
     # data transferring completed
     # communicating with server and close socket
     while True:
-      recv = s.recv(128).decode()[:-1]
+      recv = s.recv(128).decode().strip()
       logging(args, log, recv)
       code = int(recv[0:3])
       if code == 226:
@@ -146,7 +146,7 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
     exit(1)
   portno = None
   while True:
-    recv = s.recv(128).decode()[:-1]
+    recv = s.recv(128).decode().strip()
     logging(args, log, recv, thread_id)
     code = int(recv[0:3])
     if code == 220: # enter username
@@ -189,7 +189,7 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
     data_link.connect((hostname, portno))
     # starting to receive
     send_and_log(s, args, log, ("RETR " + filename + "\n"), thread_id)
-    recv = s.recv(128).decode()[:-1]
+    recv = s.recv(128).decode().strip()
     logging(args, log, recv, thread_id)
     code = int(recv[0:3])
     if code == 550:
@@ -212,7 +212,7 @@ def multi_threaded_worker(args, config_lines, thread_id, block_size, log_file, n
     # data transferring completed
     # communicating with server and close socket
     while True:
-      recv = s.recv(128).decode()[:-1]
+      recv = s.recv(128).decode().strip()
       logging(args, log, recv, thread_id)
       code = int(recv[0:3])
       if code == 426 or code == 226:
@@ -290,7 +290,7 @@ if __name__ == "__main__":
       exit(1)
     file_size = 0
     while True:
-      recv = s.recv(128).decode()[:-1]
+      recv = s.recv(128).decode().strip()
       logging(args, log, recv)
       code = int(recv[0:3])
       if code == 220: # enter username
