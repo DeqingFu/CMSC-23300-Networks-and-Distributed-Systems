@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <pthread.h>
 #include <thread>
+#include <cstdio>
+#include <ctime>
 using namespace std;
 
 // global variables shared by threads
@@ -32,6 +34,8 @@ set<string> visited; //visited array
 int html_total = 0;
 int file_total = 0;
 string cookie = "";
+int num_crawling = 0;
+mutex mtx, mtx1, mtx2, mtx3;
 
 string change_name(string url) {
     if (url.size() < 2) {
@@ -79,6 +83,7 @@ void crawl_html(string url) {
         if (n == 0) {
             break;
         } else {
+
             if (!writing_flag) {
                 int pos = msg.find("\r\n\r\n");
                 if (pos != -1) {
@@ -119,7 +124,9 @@ void crawl_html(string url) {
                             if (cnt == 1) {
                                 string url = string(buff);
                                 if (visited.count(url) == 0) {
+                                    mtx.lock();
                                     q.push(url);
+                                    mtx.unlock();
                                 }
                                 break;
                             } else {
@@ -143,16 +150,13 @@ void crawl_html(string url) {
                     int flag = 0;
                     int idx = 0;
                     while(is.get(c)) {
-                        /*
-                        if (c <= 32 || c >= 127 || c == 64) {
-                            continue; //invalid character
-                        } 
-                        */  
                         if (c == '"') {
                             if (cnt == 1) {
                                 string url = string(buff);
                                 if (visited.count(url) == 0) {
+                                    mtx.lock();
                                     q.push(url);
+                                    mtx.unlock();
                                 }
                                 break;
                             } else {
@@ -238,11 +242,6 @@ void set_cookie() {
     n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
     receiving[n] = 0;
     string msg = string(receiving);
-    /*
-    int left = msg.find("Set-Cookie") + 12;
-    int right = msg.find("Vary") - 2;
-    cookie = msg.substr(left, right - left);
-    */
     int left = msg.find("Set-Cookie");
     int right = msg.find("Vary");
     if (left == string::npos || right == string::npos) {
@@ -254,14 +253,27 @@ void set_cookie() {
     }
 }
 
-void crawl() {
+void crawl(int thread_id) {
     string url; 
+    char empty;
     while (1) {
-        if (q.empty()) {
-            break;
+        mtx.lock();
+        empty = q.empty();
+        if (empty) {
+            mtx1.lock();
+            if (num_crawling > 0) {
+                mtx1.unlock();
+                mtx.unlock();
+                continue;
+            } else {
+                mtx1.unlock();
+                mtx.unlock();
+                break;
+            }
         } else {
             url = q.front();
             q.pop();
+            mtx.unlock();
             if (url[0] == '#' or !url.compare("/") or !url.compare("./")) {
                 continue;
             } else {
@@ -286,26 +298,31 @@ void crawl() {
                 continue;
             }
 
-            //cout << url[url.size()-1] << endl;
-            /*
-            
-            dot_pos = url.rfind('.');
-            */
+            mtx2.lock();
             visited.insert(url);
+            mtx2.unlock();
+            mtx1.lock();
+            num_crawling ++;
+            mtx1.unlock();
             string file_extension = url.substr(dot_pos+1, url.size()-dot_pos);
             if (file_extension == "htm" || file_extension == "html" || url[url.size()-1] == '/') {
-                cout << "html " << url << endl;
+                mtx3.lock();
+                cout << "Tread " << thread_id << ": Crawling html " << url << endl;
                 html_total ++;
+                mtx3.unlock();
                 crawl_html(url);
             } else {
-                cout << "file " << url << endl;
+                mtx3.lock();
+                cout << "Tread " << thread_id << ": Crawling file " << url << endl;
                 file_total ++;
+                mtx3.unlock();
                 download_file(url);
             }
+            mtx1.lock();
+            num_crawling --;
+            mtx1.unlock();
         }
     }
-    cout << "html total: " << html_total << endl;
-    cout << "file total: " << file_total << endl;
 }
 
 int main(int argc, char **argv) {
@@ -361,6 +378,17 @@ int main(int argc, char **argv) {
     // Initializing downloading queue
     set_cookie();
     q.push("index.html");
-    crawl();
+
+    // Multi-threading 
+    thread threads[max_flows];
+    for (int t = 0; t < max_flows; t ++) {
+        threads[t] = thread(crawl, t); 
+        usleep(100);
+    }
+    for (int t = 0; t < max_flows; t ++) {
+        threads[t].join();
+    }
+    cout << html_total + file_total << " files crawled with ";
+    cout << html_total << " html pages and "<< file_total << " contents"  << endl;
     return 0;
 }
