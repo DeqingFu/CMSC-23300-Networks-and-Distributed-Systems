@@ -26,7 +26,7 @@ How to make and run:
 
 Design Choices:
   - I choose to use HTTP/1.0 and C++ 11 (because it has std::thread for multithreading)
-  
+
   - The naive multi threading impletation would cause the inefficiency that some threads would 
   exit earlier because when it detects that the queue is empty. However, this does not mean the 
   crawling is over, it may be due to some other thread is still crawling but haven't pushed their 
@@ -38,4 +38,92 @@ Design Choices:
     2. In initializing the queue, I create the new thread every 0.1 seconds, to make sure when a new
     thread is created, the queue is not empty yet. 
   
-  
+  - For some corner cases such as rhc.zip, whose html code is href = "rhc.zip", while it's not in the 
+    root directory but at the directory of clickstream. Thus for the design, we should change the path 
+    of each crawled url to its absolute path relative to the server. 
+
+Result (crawled files, 74 content file and 10 html files):
+    60gmobile_60ghz.css
+    60gmobile_Mobicom14-Angora.pdf
+    60gmobile_index.html
+    60gmobile_mobicom14-60gmobile.pdf
+    60gmobile_offload-60g.png
+    60gmobile_sigcomm-beam3d-slides.pdf
+    clickstream_css_bootstrap.min.css
+    clickstream_css_whisper.css
+    clickstream_documentation.html
+    clickstream_img_demo.jpg
+    clickstream_index.html
+    clickstream_js_bootstrap.min.js
+    clickstream_js_project.js
+    clickstream_multi_color.html?json=chi_full_dist.json
+    clickstream_rhc.zip
+    contact.html
+    dynamics.html
+    images_adam.png
+    images_ale.png
+    images_allen.png
+    images_ana.jpg
+    images_arch.jpg
+    images_aws.gif
+    images_ben-2.jpg
+    images_bimal-2.jpg
+    images_bimal-3.jpg
+    images_bolun-2.jpg
+    images_campus_greenery.jpg
+    images_chris.png
+    images_christo.jpg
+    images_cisco.gif
+    images_claude.jpg
+    images_darpa.gif
+    images_devshi.jpg
+    images_divya.jpg
+    images_emily.jpg
+    images_favicon.ico
+    images_gang.jpg
+    images_google.jpg
+    images_heather-2.jpg
+    images_hp.gif
+    images_huiying-2.jpg
+    images_jenna-2.jpg
+    images_jill.png
+    images_kirti.jpg
+    images_kp.png
+    images_lei.png
+    images_lili.png
+    images_lin.png
+    images_max.png
+    images_milbauer.png
+    images_nader.png
+    images_nsf.gif
+    images_olivia-2.jpg
+    images_pritha.png
+    images_qingyun.png
+    images_redbud_buildings.jpg
+    images_rockefeller_interior.jpg
+    images_sandlab.png
+    images_shawn2.jpg
+    images_shiliang-2.jpg
+    images_style.css
+    images_style2.css
+    images_veena.png
+    images_vinod.jpg
+    images_wendy-2.jpg
+    images_xia.png
+    images_xiaohan.png
+    images_xinyi-2.jpg
+    images_yanzi-2.jpg
+    images_yibo.jpg
+    images_yuanshun-2.jpg
+    images_yuxin-2.jpg
+    images_zach.png
+    images_zengbin.jpg
+    images_zhijing-2.jpg
+    images_zhujun-2.jpg
+    index.html
+    pdfs_dcqcn-sigcomm15.pdf
+    pdfs_docx2go.pdf
+    people.html
+    pubs.html
+    sponsors.html
+    visit.html

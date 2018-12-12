@@ -44,6 +44,7 @@ int get_code(char* buff) {
     return stoi(code);
 }
 
+
 string change_name(string url) {
     if (url.size() < 2) {
         return url;
@@ -90,10 +91,18 @@ void crawl_html(string url, string cookie) {
     fs.open(filename);
     int writing_flag = 0;
     int code_flag = 0;
+    
+    string path = "";
+    int idx_pos = url.find("/index.html");
+    if (idx_pos != string::npos) {
+        path = url.substr(0, idx_pos+1);
+    }
+    
     while (1) {
         memset(receiving, 0, sizeof(receiving));
         n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
         receiving[n] = 0;
+        string msg = string(receiving);
         if (!code_flag) {
             int code = get_code(receiving);
             if (code == 404) {
@@ -104,8 +113,6 @@ void crawl_html(string url, string cookie) {
             }
             code_flag = 1;
         }
-
-        string msg = string(receiving);
         if (n == 0) {
             break;
         } else {
@@ -127,7 +134,7 @@ void crawl_html(string url, string cookie) {
     ifstream is(filename);
     char buff[128];
     char c;
-    while (is.get(c)) {
+    while (is.get(c)) {    
         memset(buff, 0, sizeof(buff));
         char sh[4];
         char sr[3];
@@ -144,6 +151,17 @@ void crawl_html(string url, string cookie) {
                         if (c == '"' || c == 39) {
                             if (cnt == 1) {
                                 string new_url = string(buff);
+                                if (new_url[0] == '#' or !new_url.compare("/") or !new_url.compare("./")) break;
+                                int left = url.find(hostname);
+                                if (new_url[0] == 'h') {
+                                    if (left == string::npos) {
+                                        break;
+                                    }
+                                }
+                                if (new_url.find("#") == string::npos && path != "") {
+                                    string path_cpy = path;
+                                    new_url = path_cpy.replace(path.size(), new_url.size(), new_url);
+                                } 
                                 if (visited.count(new_url) == 0) {
                                     mtx.lock();
                                     q.push(new_url);
@@ -171,9 +189,21 @@ void crawl_html(string url, string cookie) {
                     int flag = 0;
                     int idx = 0;
                     while(is.get(c)) {
-                        if (c == '"') {
+                        if (c == '"' || c == 39) {
                             if (cnt == 1) {
                                 string new_url = string(buff);
+                                if (new_url[0] == '#' or !new_url.compare("/") or !new_url.compare("./")) break;
+                                int left = url.find(hostname);
+                                if (new_url[0] == 'h') {
+                                    if (left == string::npos) {
+                                        break;
+                                    }
+                                }
+                                if (new_url.find("#") == string::npos && path != "") {
+                                    string path_cpy = path;
+                                    new_url = path_cpy.replace(path.size(), new_url.size(), new_url);
+                                } 
+
                                 if (visited.count(new_url) == 0) {
                                     mtx.lock();
                                     q.push(new_url);
@@ -205,16 +235,7 @@ void download_file(string url, string cookie) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
         cout << "error" << endl;
-        if (max_flows == 1) {
-            close(sockfd);
-            exit(1); 
-        } else {
-            mtx.lock();
-            q.push(url);
-            mtx.unlock();
-            close(sockfd);
-            exit(0);
-        }
+        exit(1); 
     }
     char sending[1024];
     char receiving[4096];
@@ -242,7 +263,6 @@ void download_file(string url, string cookie) {
             }
             code_flag = 1;
         }
-
         if (n == 0) {
             break;
         } else {

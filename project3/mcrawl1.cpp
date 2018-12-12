@@ -92,6 +92,13 @@ void crawl_html(string url) {
     fs.open(filename);
     int writing_flag = 0;
     int code_flag = 0;
+    
+    string path = "";
+    int idx_pos = url.find("/index.html");
+    if (idx_pos != string::npos) {
+        path = url.substr(0, idx_pos+1);
+    }
+    
     while (1) {
         memset(receiving, 0, sizeof(receiving));
         n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
@@ -145,6 +152,17 @@ void crawl_html(string url) {
                         if (c == '"' || c == 39) {
                             if (cnt == 1) {
                                 string new_url = string(buff);
+                                if (new_url[0] == '#' or !new_url.compare("/") or !new_url.compare("./")) break;
+                                int left = url.find(hostname);
+                                if (new_url[0] == 'h') {
+                                    if (left == string::npos) {
+                                        break;
+                                    }
+                                }
+                                if (new_url.find("#") == string::npos && path != "") {
+                                    string path_cpy = path;
+                                    new_url = path_cpy.replace(path.size(), new_url.size(), new_url);
+                                } 
                                 if (visited.count(new_url) == 0) {
                                     mtx.lock();
                                     q.push(new_url);
@@ -175,6 +193,18 @@ void crawl_html(string url) {
                         if (c == '"' || c == 39) {
                             if (cnt == 1) {
                                 string new_url = string(buff);
+                                if (new_url[0] == '#' or !new_url.compare("/") or !new_url.compare("./")) break;
+                                int left = url.find(hostname);
+                                if (new_url[0] == 'h') {
+                                    if (left == string::npos) {
+                                        break;
+                                    }
+                                }
+                                if (new_url.find("#") == string::npos && path != "") {
+                                    string path_cpy = path;
+                                    new_url = path_cpy.replace(path.size(), new_url.size(), new_url);
+                                } 
+
                                 if (visited.count(new_url) == 0) {
                                     mtx.lock();
                                     q.push(new_url);
