@@ -3,5 +3,39 @@
 | CNetID: deqing                              |
 | The University of Chicago                   |
 | CMSC 23300 Networks and Distributed Systems |
-| Project 2 Crawler                           |
+| Project 3 HTTP Crawler                      |
 -----------------------------------------------
+
+Usage:
+  mcrawl [ -n max-flows ] [ -h hostname ] [ -p port ] [-f local- directory]
+      [ -n ] : number of maximum threads your crawler can spawn to perform a cooperative crawl
+      [ -h ] : hostname of the server to crawl data from
+      [ -p ] : port number on the server where the web server is running
+      [ -f ]: local directory to host the download files
+
+How to make and run:
+  For Part I and II:
+    $ make mcrawl1
+    - For Part I, run the single threaded version:
+      $ ./mcrawl1 -n 1 -h eychtipi.cs.uchicago.edu -p 80 -f FILE_DIRECTORY
+    - For Part II, run the multi threaded version; for example, 4 threads:
+      $ ./mcrawl1 -n 4 -h eychtipi.cs.uchicago.edu -p 80 -f FILE_DIRECTORY
+  For Part III (for example with 4 threads)
+    $ make mcrawl2
+    $ ./mcrawl2 -n 4 -h eychtipi.cs.uchicago.edu -p 80 -f FILE_DIRECTORY
+
+Design Choices:
+  - I choose to use HTTP/1.0 and C++ 11 (because it has std::thread for multithreading)
+  
+  - The naive multi threading impletation would cause the inefficiency that some threads would 
+  exit earlier because when it detects that the queue is empty. However, this does not mean the 
+  crawling is over, it may be due to some other thread is still crawling but haven't pushed their 
+  crawled url into the queue. To make sure the threads are all keep running without exiting earlier, 
+  I make these two modification:
+    1. I maintain a variable called num_crawling, which represents the number of threads that are
+    still working on crawing. Only if num_crawling == 0 and the queue is empty shoud the thread to
+    terminate. 
+    2. In initializing the queue, I create the new thread every 0.1 seconds, to make sure when a new
+    thread is created, the queue is not empty yet. 
+  
+  
