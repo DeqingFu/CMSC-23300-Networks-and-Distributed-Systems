@@ -54,9 +54,9 @@ void crawl_html(string url) {
     }
     char sending[1024];
     char receiving[2048];
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
     //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     //cout << filename << endl;
@@ -172,39 +172,48 @@ void download_file(string url) {
         exit(1); 
     }
     char sending[1024];
-    char receiving[2048];
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
+    char receiving[65536];
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
     //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     ofstream fs;
-    fs.open(filename.c_str(), ios::out | ios::binary);
+    fs.open(filename.c_str(), ios::in | ios::out | ios::binary);
     int writing_flag = 0;
+    int file_size = 0;
     while (1) {
         memset(receiving, 0, sizeof(receiving));
-        n = recv(sockfd, receiving, sizeof(receiving), 0);
-        //receiving[n] = 0;
-        
+        n = recv(sockfd, receiving, sizeof(receiving) -1, 0);
+        receiving[n] = 0;
+        //file_size += n;
         if (n == 0) {
             break;
         } else {
-            
-            //cout << "writing " << filename << endl;
+            //cout << writing_flag << endl;
             if (!writing_flag) {
-                char* ptr = strstr(receiving, "\r\n\r\n");
-                if (ptr) {
-                    ptr += 4;
-                    fs << ptr;
+                int pos;
+                
+                for (pos = 0; pos < n-4; pos ++) {
+                    if (receiving[pos] == '\r' && receiving[pos+1] == '\n' && receiving[pos+2] == '\r' && receiving[pos+3] == '\n') {
+                        writing_flag = 1;
+                        break;
+                    } 
+                }
+                if (pos <= n) {
                     writing_flag = 1;
                 }
-            } else {
-                fs << receiving;
-            }
             
-            fs << receiving;
+                //cout << pos << " " << n << endl;
+                for (int i = pos + 4; i < n; i ++) {
+                   fs << receiving[i];
+               }
+            } else {
+                 fs << receiving;
+            }
         }
     }
+    //cout << file_size << endl;
     fs.close();
     return;
 }
@@ -215,17 +224,22 @@ void set_cookie() {
         cout << "error" << endl;
         exit(1); 
     }
-    char sending[128];
+    char sending[1024];
     char receiving[2048];
     snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , "index.html" ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     memset(receiving, 0, sizeof(receiving));
     n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
+    //cout << receiving << endl;
+    //exit(0);
     receiving[n] = 0;
     string msg = string(receiving);
     int left = msg.find("Set-Cookie") + 12;
     int right = msg.find("Domain") - 1;
+    //cout << left << right << endl;
+    //exit(0);
     cookie = msg.substr(left, right - left);
+    //cout << cookie << endl;
 }
 
 void crawl() {
