@@ -35,7 +35,16 @@ int html_total = 0;
 int file_total = 0;
 string cookie = "";
 int num_crawling = 0;
-mutex mtx, mtx1, mtx2, mtx3;
+mutex mtx, mtx1, mtx2, mtx3, mtx4, mtx5;
+
+int get_code(char* buff) {
+    string msg = string(buff);
+    int pos = msg.find("HTTP");
+    pos += 9;
+    string code = msg.substr(pos, 3);
+    return stoi(code);
+}
+
 
 string change_name(string url) {
     if (url.size() < 2) {
@@ -59,7 +68,16 @@ void crawl_html(string url) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
         cout << "error" << endl;
-        exit(1); 
+        if (max_flows == 1) {
+            close(sockfd);
+            exit(1); 
+        } else {
+            mtx.lock();
+            q.push(url);
+            mtx.unlock();
+            close(sockfd);
+            exit(0);
+        }
     }
     char sending[1024];
     char receiving[2048];
@@ -73,11 +91,22 @@ void crawl_html(string url) {
     ofstream fs;
     fs.open(filename);
     int writing_flag = 0;
+    int code_flag = 0;
     while (1) {
         memset(receiving, 0, sizeof(receiving));
         n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
         receiving[n] = 0;
         string msg = string(receiving);
+        if (!code_flag) {
+            int code = get_code(receiving);
+            if (code == 404) {
+                close(sockfd);
+                remove(filename.c_str());
+                fs.close();
+                return;
+            }
+            code_flag = 1;
+        }
         if (n == 0) {
             break;
         } else {
@@ -99,7 +128,7 @@ void crawl_html(string url) {
     ifstream is(filename);
     char buff[128];
     char c;
-    while (is.get(c)) {
+    while (is.get(c)) {    
         memset(buff, 0, sizeof(buff));
         char sh[4];
         char sr[3];
@@ -113,12 +142,12 @@ void crawl_html(string url) {
                     int flag = 0;
                     int idx = 0;
                     while(is.get(c)) {         
-                        if (c == '"') {
+                        if (c == '"' || c == 39) {
                             if (cnt == 1) {
-                                string url = string(buff);
-                                if (visited.count(url) == 0) {
+                                string new_url = string(buff);
+                                if (visited.count(new_url) == 0) {
                                     mtx.lock();
-                                    q.push(url);
+                                    q.push(new_url);
                                     mtx.unlock();
                                 }
                                 break;
@@ -143,12 +172,12 @@ void crawl_html(string url) {
                     int flag = 0;
                     int idx = 0;
                     while(is.get(c)) {
-                        if (c == '"') {
+                        if (c == '"' || c == 39) {
                             if (cnt == 1) {
-                                string url = string(buff);
-                                if (visited.count(url) == 0) {
+                                string new_url = string(buff);
+                                if (visited.count(new_url) == 0) {
                                     mtx.lock();
-                                    q.push(url);
+                                    q.push(new_url);
                                     mtx.unlock();
                                 }
                                 break;
@@ -166,6 +195,9 @@ void crawl_html(string url) {
                 break;
         }
     }
+    mtx3.lock();
+    html_total ++;
+    mtx3.unlock();
     is.close();
     close(sockfd);
 }
@@ -188,9 +220,20 @@ void download_file(string url) {
     ofstream fs;
     fs.open(filename.c_str(), ios::out | ios::binary);
     int writing_flag = 0;
+    int code_flag = 0;
     while (1) {
         memset(receiving, 0, sizeof(receiving));
         n = recv(sockfd, receiving, sizeof(receiving), 0);
+        if (!code_flag) {
+            int code = get_code(receiving);
+            if (code == 404) {
+                close(sockfd);
+                remove(filename.c_str());
+                fs.close();
+                return;
+            }
+            code_flag = 1;
+        }
         if (n == 0) {
             break;
         } else {
@@ -217,7 +260,11 @@ void download_file(string url) {
             }
         }
     }
+    mtx5.lock();
+    file_total ++;
+    mtx5.unlock();
     fs.close();
+    close(sockfd);
     return;
 }
 
@@ -225,7 +272,7 @@ void set_cookie() {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
         cout << "error" << endl;
-        exit(1); 
+        exit(1);
     }
     char sending[1024];
     char receiving[2048];
@@ -295,16 +342,14 @@ void crawl(int thread_id) {
             mtx1.unlock();
             string file_extension = url.substr(dot_pos+1, url.size()-dot_pos);
             if (file_extension == "htm" || file_extension == "html" || url[url.size()-1] == '/') {
-                mtx3.lock();
+                mtx4.lock();
                 cout << "Tread " << thread_id << ": Crawling html " << url << endl;
-                html_total ++;
-                mtx3.unlock();
+                mtx4.unlock();
                 crawl_html(url);
             } else {
-                mtx3.lock();
+                mtx4.lock();
                 cout << "Tread " << thread_id << ": Crawling file " << url << endl;
-                file_total ++;
-                mtx3.unlock();
+                mtx4.unlock();
                 download_file(url);
             }
             mtx1.lock();
