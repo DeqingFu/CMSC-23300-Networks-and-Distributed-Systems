@@ -16,6 +16,8 @@
 #include <netdb.h>
 #include <stdio.h>
 #include <algorithm>
+#include <pthread.h>
+#include <thread>
 using namespace std;
 
 // global variables shared by threads
@@ -39,6 +41,10 @@ string change_name(string url) {
         url.erase(0,2);
     }
     //url.replace(url.begin(), url.end(), '/', '_');
+    if (url[url.size()-1] == '/') {
+        int pos = url.rfind('/');
+        url.replace(pos, 5, ".html");
+    }
     replace(url.begin(), url.end(), '/', '_');
     char ret[128];
     snprintf(ret, sizeof(ret), "%s/%s", local_directory.c_str() , url.c_str());
@@ -271,15 +277,13 @@ void crawl() {
             }
 
             //cout << url[url.size()-1] << endl;
-            if (url[url.size()-1] == '/') {
-                int pos = url.rfind('/');
-                url.replace(pos, 5, ".html");
-            }
+            /*
+            
             dot_pos = url.rfind('.');
-
+            */
             visited.insert(url);
             string file_extension = url.substr(dot_pos+1, url.size()-dot_pos);
-            if (file_extension == "htm" || file_extension == "html") {
+            if (file_extension == "htm" || file_extension == "html" || url[url.size()-1] == '/') {
                 cout << "html " << url << endl;
                 html_total ++;
                 crawl_html(url);
@@ -350,4 +354,3 @@ int main(int argc, char **argv) {
     crawl();
     return 0;
 }
-
