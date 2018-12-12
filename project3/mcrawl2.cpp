@@ -143,10 +143,10 @@ void crawl_html(string url, string cookie) {
                     while(is.get(c)) {         
                         if (c == '"' || c == 39) {
                             if (cnt == 1) {
-                                string url = string(buff);
-                                if (visited.count(url) == 0) {
+                                string new_url = string(buff);
+                                if (visited.count(new_url) == 0) {
                                     mtx.lock();
-                                    q.push(url);
+                                    q.push(new_url);
                                     mtx.unlock();
                                 }
                                 break;
@@ -173,10 +173,10 @@ void crawl_html(string url, string cookie) {
                     while(is.get(c)) {
                         if (c == '"') {
                             if (cnt == 1) {
-                                string url = string(buff);
-                                if (visited.count(url) == 0) {
+                                string new_url = string(buff);
+                                if (visited.count(new_url) == 0) {
                                     mtx.lock();
-                                    q.push(url);
+                                    q.push(new_url);
                                     mtx.unlock();
                                 }
                                 break;
