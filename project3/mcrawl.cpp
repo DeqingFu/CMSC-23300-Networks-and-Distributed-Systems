@@ -60,9 +60,8 @@ void crawl_html(string url) {
     }
     char sending[1024];
     char receiving[2048];
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n", url.c_str() ,hostname.c_str(), cookie.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     //cout << filename << endl;
@@ -179,9 +178,8 @@ void download_file(string url) {
     }
     char sending[1024];
     char receiving[4096];
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     ofstream fs;
@@ -232,16 +230,12 @@ void set_cookie() {
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     memset(receiving, 0, sizeof(receiving));
     n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
-    //cout << receiving << endl;
-    //exit(0);
     receiving[n] = 0;
     string msg = string(receiving);
     int left = msg.find("Set-Cookie") + 12;
-    int right = msg.find("Domain") - 1;
-    //cout << left << right << endl;
-    //exit(0);
+    int right = msg.find("Vary") - 2;
     cookie = msg.substr(left, right - left);
-    //cout << cookie << endl;
+    cout << cookie << endl;
 }
 
 void crawl() {
