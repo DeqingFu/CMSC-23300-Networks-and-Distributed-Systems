@@ -249,6 +249,7 @@ string request_cookie() {
 void crawl(int thread_id, string cookie) {
     string url; 
     while (1) {
+        mtx.lock();
         if (q.empty()) {
             mtx1.lock();
             if (num_crawling > 0) {
