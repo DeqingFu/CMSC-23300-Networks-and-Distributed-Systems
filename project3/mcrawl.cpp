@@ -15,7 +15,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <stdio.h>
-
+#include <algorithm>
 using namespace std;
 
 // global variables shared by threads
@@ -29,33 +29,63 @@ queue<string> q; //downloading queue
 set<string> visited; //visited array
 int html_total = 0;
 int file_total = 0;
+string cookie;
 
-void crawl_html(string html) {
+string change_name(string url) {
+    if (url.size() < 2) {
+        return url;
+    }
+    if (url[0] == '.' && url[1] == '/') {
+        url.erase(0,2);
+    }
+    //url.replace(url.begin(), url.end(), '/', '_');
+    replace(url.begin(), url.end(), '/', '_');
+    char ret[128];
+    snprintf(ret, sizeof(ret), "%s/%s", local_directory.c_str() , url.c_str());
+    return ret;
+}
+
+
+void crawl_html(string url) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
         cout << "error" << endl;
         exit(1); 
     }
-    char sending[128];
-    char receiving[1024];
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , html.c_str() ,hostname.c_str());
+    char sending[1024];
+    char receiving[2048];
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    string filename = change_name(url);
+    //cout << filename << endl;
     ofstream fs;
-    fs.open("tmp.html");
+    fs.open(filename);
+    int writing_flag = 0;
     while (1) {
         memset(receiving, 0, sizeof(receiving));
-        n = recv(sockfd, receiving, sizeof(receiving), 0);
+        n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
+        receiving[n] = 0;
+        string msg = string(receiving);
         if (n == 0) {
             break;
         } else {
-            //printf(receiving);
-            fs << receiving;
-            //fprintf(fd, "%s", receiving);
+            if (!writing_flag) {
+                int pos = msg.find("\r\n\r\n");
+                if (pos != -1) {
+                    pos += 4;
+                    fs << msg.substr(pos, msg.size() - pos).c_str();
+                    writing_flag = 1;
+                }
+            } else {
+                fs << receiving;
+            }
         }
     }
     fs.close();
-
-    ifstream is("tmp.html");
+    
+    ifstream is(filename);
     char buff[128];
     char c;
     while (is.get(c)) {
@@ -72,9 +102,11 @@ void crawl_html(string html) {
                     int flag = 0;
                     int idx = 0;
                     while(is.get(c)) {
-                        if (c < 32 || c > 127 || c == 64) {
+                        /*
+                        if (c <= 32 || c >= 127 || c == 64) {
                             continue; //invalid character
-                        }                  
+                        } 
+                        */                 
                         if (c == '"') {
                             if (cnt == 1) {
                                 string url = string(buff);
@@ -103,9 +135,11 @@ void crawl_html(string html) {
                     int flag = 0;
                     int idx = 0;
                     while(is.get(c)) {
-                        if (c < 32 || c > 127 || c == 64) {
+                        /*
+                        if (c <= 32 || c >= 127 || c == 64) {
                             continue; //invalid character
-                        }   
+                        } 
+                        */  
                         if (c == '"') {
                             if (cnt == 1) {
                                 string url = string(buff);
@@ -131,14 +165,71 @@ void crawl_html(string html) {
     close(sockfd);
 }
 
-void download_file(string file_name) {
+void download_file(string url) {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
+        cout << "error" << endl;
+        exit(1); 
+    }
+    char sending[1024];
+    char receiving[2048];
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
+    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    string filename = change_name(url);
+    ofstream fs;
+    fs.open(filename.c_str(), ios::out | ios::binary);
+    int writing_flag = 0;
+    while (1) {
+        memset(receiving, 0, sizeof(receiving));
+        n = recv(sockfd, receiving, sizeof(receiving), 0);
+        //receiving[n] = 0;
+        
+        if (n == 0) {
+            break;
+        } else {
+            
+            //cout << "writing " << filename << endl;
+            if (!writing_flag) {
+                char* ptr = strstr(receiving, "\r\n\r\n");
+                if (ptr) {
+                    ptr += 4;
+                    fs << ptr;
+                    writing_flag = 1;
+                }
+            } else {
+                fs << receiving;
+            }
+            
+            fs << receiving;
+        }
+    }
+    fs.close();
     return;
 }
 
-void crawl() {
-    
-    string url; 
+void set_cookie() {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
+        cout << "error" << endl;
+        exit(1); 
+    }
+    char sending[128];
+    char receiving[2048];
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , "index.html" ,hostname.c_str());
+    int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    memset(receiving, 0, sizeof(receiving));
+    n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
+    receiving[n] = 0;
+    string msg = string(receiving);
+    int left = msg.find("Set-Cookie") + 12;
+    int right = msg.find("Domain") - 1;
+    cookie = msg.substr(left, right - left);
+}
 
+void crawl() {
+    string url; 
     while (1) {
         if (q.empty()) {
             break;
@@ -161,17 +252,29 @@ void crawl() {
             if (!url.substr(0, 3).compare("../")) {
                 continue;
             }
-            cout << url << endl;
-            visited.insert(url);
+            
+            
             int dot_pos = url.rfind('.');
-            if (dot_pos == -1) {
+            //cout << url << " "  << dot_pos << endl;
+            if (dot_pos == -1 && url.find('/') == -1) {
                 continue;
             }
-            string file_extension = url.substr(dot_pos+1, url.size()-dot_pos); 
+
+            //cout << url[url.size()-1] << endl;
+            if (url[url.size()-1] == '/') {
+                int pos = url.rfind('/');
+                url.replace(pos, 5, ".html");
+            }
+            dot_pos = url.rfind('.');
+
+            visited.insert(url);
+            string file_extension = url.substr(dot_pos+1, url.size()-dot_pos);
             if (file_extension == "htm" || file_extension == "html") {
+                cout << "html " << url << endl;
                 html_total ++;
                 crawl_html(url);
             } else {
+                cout << "file " << url << endl;
                 file_total ++;
                 download_file(url);
             }
@@ -232,6 +335,7 @@ int main(int argc, char **argv) {
     }
 
     // Initializing downloading queue
+    set_cookie();
     q.push("index.html");
     crawl();
     return 0;
