@@ -31,7 +31,7 @@ queue<string> q; //downloading queue
 set<string> visited; //visited array
 int html_total = 0;
 int file_total = 0;
-string cookie;
+string cookie = "";
 
 string change_name(string url) {
     if (url.size() < 2) {
@@ -60,8 +60,11 @@ void crawl_html(string url) {
     }
     char sending[1024];
     char receiving[2048];
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n", url.c_str() ,hostname.c_str(), cookie.c_str());
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    if (cookie == "") {
+        snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    } else {
+        snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n", url.c_str() ,hostname.c_str(), cookie.c_str());
+    }
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     //cout << filename << endl;
@@ -178,8 +181,11 @@ void download_file(string url) {
     }
     char sending[1024];
     char receiving[4096];
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
-    //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    if (cookie == "") {
+        snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
+    } else {
+        snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
+    }
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     ofstream fs;
@@ -232,10 +238,20 @@ void set_cookie() {
     n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
     receiving[n] = 0;
     string msg = string(receiving);
+    /*
     int left = msg.find("Set-Cookie") + 12;
     int right = msg.find("Vary") - 2;
     cookie = msg.substr(left, right - left);
-    cout << cookie << endl;
+    */
+    int left = msg.find("Set-Cookie");
+    int right = msg.find("Vary");
+    if (left == string::npos || right == string::npos) {
+        return;
+    } else {
+        left += 12;
+        right -= 2;
+        cookie = msg.substr(left, right - left);
+    }
 }
 
 void crawl() {
