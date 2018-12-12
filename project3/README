@@ -42,7 +42,7 @@ Design Choices:
     root directory but at the directory of clickstream. Thus for the design, we should change the path 
     of each crawled url to its absolute path relative to the server. 
 
-Result (crawled files, 74 content file and 10 html files):
+Result (crawled files, 75 content files and 12 html files):
     60gmobile_60ghz.css
     60gmobile_Mobicom14-Angora.pdf
     60gmobile_index.html
@@ -56,8 +56,11 @@ Result (crawled files, 74 content file and 10 html files):
     clickstream_index.html
     clickstream_js_bootstrap.min.js
     clickstream_js_project.js
+    clickstream_js_whisper.js
     clickstream_multi_color.html?json=chi_full_dist.json
+    clickstream_reference.html
     clickstream_rhc.zip
+    clickstream_whisper_actions.png
     contact.html
     dynamics.html
     images_adam.png
