@@ -94,11 +94,11 @@ void crawl_html(string url) {
     int code_flag = 0;
     
     string path = "";
-    int idx_pos = url.find("/index.html");
+    int idx_pos = url.rfind("/");
     if (idx_pos != string::npos) {
         path = url.substr(0, idx_pos+1);
     }
-    
+
     while (1) {
         memset(receiving, 0, sizeof(receiving));
         n = recv(sockfd, receiving, sizeof(receiving)-1, 0);
@@ -152,6 +152,13 @@ void crawl_html(string url) {
                         if (c == '"' || c == 39) {
                             if (cnt == 1) {
                                 string new_url = string(buff);
+                                int dot_pos = new_url.rfind('.');
+                                if (dot_pos == -1 && new_url.find('/') == -1) {
+                                    break;
+                                }
+                                if (!new_url.substr(0, 3).compare("../")) {
+                                    break;
+                                }
                                 if (new_url[0] == '#' or !new_url.compare("/") or !new_url.compare("./")) break;
                                 int left = url.find(hostname);
                                 if (new_url[0] == 'h') {
@@ -193,6 +200,13 @@ void crawl_html(string url) {
                         if (c == '"' || c == 39) {
                             if (cnt == 1) {
                                 string new_url = string(buff);
+                                int dot_pos = new_url.rfind('.');
+                                if (dot_pos == -1 && new_url.find('/') == -1) {
+                                    break;
+                                }
+                                if (!new_url.substr(0, 3).compare("../")) {
+                                    break;
+                                }
                                 if (new_url[0] == '#' or !new_url.compare("/") or !new_url.compare("./")) break;
                                 int left = url.find(hostname);
                                 if (new_url[0] == 'h') {
@@ -342,28 +356,10 @@ void crawl(int thread_id) {
             url = q.front();
             q.pop();
             mtx.unlock();
-            if (url[0] == '#' or !url.compare("/") or !url.compare("./")) {
-                continue;
-            } else {
-                int left = url.find(hostname);
-                if (url[0] == 'h') {
-                    if (left == string::npos) {
-                        continue;
-                    }
-                }
-            }
             if (visited.count(url) != 0) {
                 continue;
             }
-            if (!url.substr(0, 3).compare("../")) {
-                continue;
-            }
-            
             int dot_pos = url.rfind('.');
-            if (dot_pos == -1 && url.find('/') == -1) {
-                continue;
-            }
-
             mtx2.lock();
             visited.insert(url);
             mtx2.unlock();
@@ -371,7 +367,7 @@ void crawl(int thread_id) {
             num_crawling ++;
             mtx1.unlock();
             string file_extension = url.substr(dot_pos+1, url.size()-dot_pos);
-            if (file_extension == "htm" || file_extension == "html" || url[url.size()-1] == '/') {
+            if (file_extension == "htm" || file_extension == "html" || url[url.size()-1] == '/' || file_extension == "json") {
                 mtx4.lock();
                 cout << "Tread " << thread_id << ": Crawling html " << url << endl;
                 mtx4.unlock();
