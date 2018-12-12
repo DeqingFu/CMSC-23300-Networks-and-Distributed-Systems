@@ -27,52 +27,158 @@ struct hostent *server;
 struct sockaddr_in serv_addr;
 queue<string> q; //downloading queue
 set<string> visited; //visited array
+int html_total = 0;
+int file_total = 0;
 
-
-
-void crawl_html(string html, int sockfd) {
-    char sending[128];
-    char receiving[1024];
-    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , html.c_str() ,hostname.c_str());
-    int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
-    //FILE *fd = fopen("tmp", "rw");
-    while (1) {
-        n = recv(sockfd, receiving, sizeof(receiving), 0);
-        if (n == 0) {
-            break;
-        } else {
-            //printf(receiving);
-            cout << receiving;
-            //fprintf(fd, "%s", receiving);
-        }
-        memset(receiving, 0, sizeof(receiving));
-    }
-    //fclose(fd);
-    
-    
-
-    
-    
-
-}
-
-void crawl() {
+void crawl_html(string html) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (connect(sockfd,(struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)  {
         cout << "error" << endl;
         exit(1); 
     }
-    string html; 
+    char sending[128];
+    char receiving[1024];
+    snprintf(sending, sizeof(sending), "GET /%s HTTP/1.1\r\nHost: %s\r\n\r\n" , html.c_str() ,hostname.c_str());
+    int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
+    ofstream fs;
+    fs.open("tmp.html");
+    while (1) {
+        memset(receiving, 0, sizeof(receiving));
+        n = recv(sockfd, receiving, sizeof(receiving), 0);
+        if (n == 0) {
+            break;
+        } else {
+            //printf(receiving);
+            fs << receiving;
+            //fprintf(fd, "%s", receiving);
+        }
+    }
+    fs.close();
+
+    ifstream is("tmp.html");
+    char buff[128];
+    char c;
+    while (is.get(c)) {
+        memset(buff, 0, sizeof(buff));
+        char sh[4];
+        char sr[3];
+        switch (c) {
+            case 'H':
+            case 'h':
+                memset(sh, 0, sizeof(sh));
+                is.read(sh, 3);
+                if (!strcmp(sh, "REF") || !strcmp(sh, "ref")) {
+                    int cnt = 0;
+                    int flag = 0;
+                    int idx = 0;
+                    while(is.get(c)) {
+                        if (c < 32 || c > 127 || c == 64) {
+                            continue; //invalid character
+                        }                  
+                        if (c == '"') {
+                            if (cnt == 1) {
+                                string url = string(buff);
+                                if (visited.count(url) == 0) {
+                                    q.push(url);
+                                }
+                                break;
+                            } else {
+                                flag = 1;
+                            } 
+                            cnt ++;
+                        } else {
+                            if (flag) {
+                                buff[idx++] = c;
+                            }
+                        }
+                    }
+                }
+                break;
+            case 'S':
+            case 's':
+                memset(sr, 0, sizeof(sr));
+                is.read(sr, 2);
+                if (!strcmp(sr, "RC") || !strcmp(sr, "rc")) {
+                    int cnt = 0;
+                    int flag = 0;
+                    int idx = 0;
+                    while(is.get(c)) {
+                        if (c < 32 || c > 127 || c == 64) {
+                            continue; //invalid character
+                        }   
+                        if (c == '"') {
+                            if (cnt == 1) {
+                                string url = string(buff);
+                                if (visited.count(url) == 0) {
+                                    q.push(url);
+                                }
+                                break;
+                            } else {
+                                flag = 1;
+                            } 
+                            cnt ++;
+                        } else {
+                            if (flag) {
+                                buff[idx++] = c;
+                            }
+                        }
+                    }
+                }
+                break;
+        }
+    }
+    //fclose(fd);
+    close(sockfd);
+}
+
+void download_file(string file_name) {
+    return;
+}
+
+void crawl() {
+    
+    string url; 
+
     while (1) {
         if (q.empty()) {
             break;
         } else {
-            html = q.front();
-            cout << html << endl;
+            url = q.front();
             q.pop();
-            crawl_html(html, sockfd);
+            if (url[0] == '#' or !url.compare("/") or !url.compare("./")) {
+                continue;
+            } else {
+                int left = url.find(hostname);
+                if (url[0] == 'h') {
+                    if (left == string::npos) {
+                        continue;
+                    }
+                }
+            }
+            if (visited.count(url) != 0) {
+                continue;
+            }
+            if (!url.substr(0, 3).compare("../")) {
+                continue;
+            }
+            cout << url << endl;
+            visited.insert(url);
+            int dot_pos = url.rfind('.');
+            if (dot_pos == -1) {
+                continue;
+            }
+            string file_extension = url.substr(dot_pos+1, url.size()-dot_pos); 
+            if (file_extension == "htm" || file_extension == "html") {
+                html_total ++;
+                crawl_html(url);
+            } else {
+                file_total ++;
+                download_file(url);
+            }
         }
     }
+    cout << "html total: " << html_total << endl;
+    cout << "file total: " << file_total << endl;
 }
 
 int main(int argc, char **argv) {
