@@ -172,25 +172,21 @@ void download_file(string url) {
         exit(1); 
     }
     char sending[1024];
-    char receiving[65536];
+    char receiving[4096];
     //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nCookie: %s\r\n\r\n" , url.c_str() ,hostname.c_str(), cookie.c_str());
     //snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\nConnection: keep-alive\r\n\r\n" , url.c_str() ,hostname.c_str());
     snprintf(sending, sizeof(sending), "GET /%s HTTP/1.0\r\nHost: %s\r\n\r\n" , url.c_str() ,hostname.c_str());
     int n = sendto(sockfd, sending, strlen(sending), 0, (struct sockaddr *)&serv_addr, sizeof(serv_addr));
     string filename = change_name(url);
     ofstream fs;
-    fs.open(filename.c_str(), ios::in | ios::out | ios::binary);
+    fs.open(filename.c_str(), ios::out | ios::binary);
     int writing_flag = 0;
-    int file_size = 0;
     while (1) {
         memset(receiving, 0, sizeof(receiving));
-        n = recv(sockfd, receiving, sizeof(receiving) -1, 0);
-        receiving[n] = 0;
-        //file_size += n;
+        n = recv(sockfd, receiving, sizeof(receiving), 0);
         if (n == 0) {
             break;
         } else {
-            //cout << writing_flag << endl;
             if (!writing_flag) {
                 int pos;
                 
@@ -203,17 +199,17 @@ void download_file(string url) {
                 if (pos <= n) {
                     writing_flag = 1;
                 }
-            
-                //cout << pos << " " << n << endl;
+
                 for (int i = pos + 4; i < n; i ++) {
                    fs << receiving[i];
                }
             } else {
-                 fs << receiving;
+                for (int i = 0; i < n; i ++) {
+                    fs << receiving[i];
+                }
             }
         }
     }
-    //cout << file_size << endl;
     fs.close();
     return;
 }
